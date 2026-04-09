@@ -6,8 +6,10 @@ import { PageLoader } from '@/components/ui/Spinner'
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth()
   if (loading) return <PageLoader />
-  // Demo mode (no Supabase): allow through if profile exists
-  if (!isSupabaseConfigured && profile) return <>{children}</>
+  // Demo mode: allow only if profile exists (null after logout → redirect to login)
+  if (!isSupabaseConfigured) {
+    return profile ? <>{children}</> : <Navigate to="/login" replace />
+  }
   if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }
