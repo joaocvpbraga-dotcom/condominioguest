@@ -34,7 +34,7 @@ export function DocumentosPage() {
   const filtered = catFilter === 'todos' ? documentos : documentos.filter(d => d.categoria === catFilter)
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
@@ -116,3 +116,4 @@ export function DocumentosPage() {
     </div>
   )
 }
+

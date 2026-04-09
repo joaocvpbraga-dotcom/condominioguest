@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn, getInitials } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   LayoutDashboard, Users, CreditCard, AlertTriangle,
   Megaphone, FileText, PiggyBank,
-  Wrench, LogOut, Building2,
+  Wrench, LogOut, Building2, Menu, X,
 } from 'lucide-react'
 
 const navItems = [
@@ -20,17 +21,10 @@ const navItems = [
 
 export function Sidebar() {
   const { profile, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
 
-  return (
-    <aside className="flex flex-col w-64 min-h-screen bg-slate-900 text-white">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
-        <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-lg">
-          <Building2 size={20} />
-        </div>
-        <span className="text-lg font-bold tracking-tight">CondoGest</span>
-      </div>
-
+  const nav = (
+    <>
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
         {navItems.map(({ to, icon: Icon, label, end }) => (
@@ -38,6 +32,7 @@ export function Sidebar() {
             key={to}
             to={to}
             end={end}
+            onClick={() => setOpen(false)}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
@@ -72,6 +67,61 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* ── Mobile top bar ── */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-slate-900 text-white">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+            <Building2 size={17} />
+          </div>
+          <span className="text-base font-bold tracking-tight">CondoGest</span>
+        </div>
+        <button onClick={() => setOpen(v => !v)} className="p-2 rounded-lg hover:bg-slate-700 transition-colors">
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+
+      {/* ── Mobile drawer overlay ── */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/50"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile drawer ── */}
+      <aside className={cn(
+        'md:hidden fixed top-0 left-0 z-40 flex flex-col w-72 h-full bg-slate-900 text-white transition-transform duration-200',
+        open ? 'translate-x-0' : '-translate-x-full'
+      )}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-lg">
+              <Building2 size={20} />
+            </div>
+            <span className="text-lg font-bold tracking-tight">CondoGest</span>
+          </div>
+          <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        {nav}
+      </aside>
+
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex flex-col w-64 min-h-screen bg-slate-900 text-white">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
+          <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-lg">
+            <Building2 size={20} />
+          </div>
+          <span className="text-lg font-bold tracking-tight">CondoGest</span>
+        </div>
+        {nav}
+      </aside>
+    </>
   )
 }

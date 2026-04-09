@@ -103,7 +103,7 @@ export function OcorrenciasPage() {
     <div className="flex h-full" style={{ minHeight: 'calc(100vh - 0px)' }}>
       {/* ── Lista ── */}
       <div className={`flex flex-col flex-1 min-w-0 transition-all ${selected ? 'xl:max-w-[55%]' : ''}`}>
-        <div className="p-8 pb-4 flex items-center justify-between">
+        <div className="p-4 pb-4 md:p-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Ocorrências</h1>
             <p className="text-slate-500 mt-1 text-sm">Reclamações, avarias e sugestões</p>
@@ -377,4 +377,5 @@ export function OcorrenciasPage() {
 
 // Need React in scope for JSX fragments
 import React from 'react'
+
 
