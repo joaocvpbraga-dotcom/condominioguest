@@ -98,7 +98,10 @@ export function MoradoresPage() {
     if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('moradores').delete().eq('id', m.id)
-      if (error) { console.error('Erro ao eliminar morador:', error); return }
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao eliminar morador:', error)
+        return
+      }
     }
     setMoradores(prev => prev.filter(x => x.id !== m.id))
     // Desassociar frações
