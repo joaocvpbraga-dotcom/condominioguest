@@ -46,6 +46,10 @@ export function OcorrenciasPage() {
   const [novaNota, setNovaNota] = useState('')
   const [notaInterna, setNotaInterna] = useState(true)
   const [openModal, setOpenModal] = useState(false)
+  // Modal de detalhe para moradores
+  const [openDetail, setOpenDetail] = useState(false)
+  const [detailOcorrencia, setDetailOcorrencia] = useState<OcorrenciaComNotas | null>(null)
+  const [moradorResposta, setMoradorResposta] = useState('')
   const [form, setForm] = useState({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
 
   // Moradores só veem as suas; admin vê todas
@@ -56,6 +60,27 @@ export function OcorrenciasPage() {
   const filtered = filter === 'todas'
     ? visibleOcorrencias
     : visibleOcorrencias.filter(o => o.estado === filter)
+
+  function openMoradorDetail(o: OcorrenciaComNotas) {
+    setDetailOcorrencia(o)
+    setMoradorResposta('')
+    setOpenDetail(true)
+  }
+
+  function enviarRespostaMorador() {
+    if (!moradorResposta.trim() || !detailOcorrencia) return
+    const nota: Nota = {
+      id: `n-${Date.now()}`,
+      texto: moradorResposta.trim(),
+      autor: profile?.nome ?? 'Morador',
+      created_at: new Date().toISOString(),
+      interna: false,
+    }
+    const updated = { ...detailOcorrencia, notas: [...detailOcorrencia.notas, nota] }
+    setOcorrencias(prev => prev.map(o => o.id === updated.id ? updated : o))
+    setDetailOcorrencia(updated)
+    setMoradorResposta('')
+  }
 
   // Sync selected when state changes
   function updateOcorrencia(updated: OcorrenciaComNotas) {
@@ -82,7 +107,7 @@ export function OcorrenciasPage() {
     const nota: Nota = {
       id: `n-${Date.now()}`,
       texto: novaNota.trim(),
-      autor: 'Admin',
+      autor: profile?.nome ?? 'Admin',
       created_at: new Date().toISOString(),
       interna: notaInterna,
     }
@@ -156,12 +181,14 @@ export function OcorrenciasPage() {
               <p className="text-sm">Nenhuma ocorrência neste estado</p>
             </div>
           )}
-          {filtered.map(o => (
+          {filtered.map(o => {
+            const publicNotes = o.notas.filter(n => !n.interna)
+            return (
             <Card
               key={o.id}
               className={`cursor-pointer hover:shadow-md transition-all ${selected?.id === o.id ? 'ring-2 ring-blue-500 border-blue-200' : ''}`}
             >
-              <div className="px-5 py-4 flex items-start gap-3" onClick={() => setSelected(selected?.id === o.id ? null : o)}>
+              <div className="px-5 py-4 flex items-start gap-3" onClick={() => isAdmin ? setSelected(selected?.id === o.id ? null : o) : openMoradorDetail(o)}>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-semibold text-slate-800 text-sm">{o.titulo}</h3>
@@ -179,6 +206,11 @@ export function OcorrenciasPage() {
                         <MessageSquare size={11} /> {o.notas.length} {o.notas.length === 1 ? 'nota' : 'notas'}
                       </span>
                     )}
+                    {!isAdmin && publicNotes.length > 0 && (
+                      <span className="flex items-center gap-1 text-green-600 font-medium">
+                        <CheckCircle2 size={11} /> {publicNotes.length} resposta{publicNotes.length > 1 ? 's' : ''} do admin
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -189,7 +221,8 @@ export function OcorrenciasPage() {
                 </div>
               </div>
             </Card>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -251,7 +284,7 @@ export function OcorrenciasPage() {
                 })}
               </div>
 
-              {selected.estado !== 'fechada' && selected.estado !== 'resolvida' && (
+              {isAdmin && selected.estado !== 'fechada' && selected.estado !== 'resolvida' && (
                 <Button
                   size="sm"
                   className="mt-3 w-full"
@@ -260,7 +293,7 @@ export function OcorrenciasPage() {
                   Avançar para "{PIPELINE[pipelineIdx + 1]?.label}"
                 </Button>
               )}
-              {selected.estado === 'resolvida' && (
+              {isAdmin && selected.estado === 'resolvida' && (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -303,16 +336,20 @@ export function OcorrenciasPage() {
           {/* Adicionar nota */}
           <div className="px-6 py-4 border-t border-slate-100">
             <div className="flex items-center gap-3 mb-2">
-              <p className="text-xs font-semibold text-slate-600">Adicionar nota</p>
-              <label className="flex items-center gap-1.5 ml-auto cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notaInterna}
-                  onChange={e => setNotaInterna(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded text-yellow-500"
-                />
-                <span className="text-xs text-slate-500">Nota interna</span>
-              </label>
+              <p className="text-xs font-semibold text-slate-600">
+                {isAdmin ? 'Adicionar nota' : 'Enviar resposta ao morador'}
+              </p>
+              {isAdmin && (
+                <label className="flex items-center gap-1.5 ml-auto cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notaInterna}
+                    onChange={e => setNotaInterna(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-yellow-500"
+                  />
+                  <span className="text-xs text-slate-500">Nota interna</span>
+                </label>
+              )}
             </div>
             <div className="flex gap-2">
               <textarea
@@ -335,6 +372,100 @@ export function OcorrenciasPage() {
             <p className="text-xs text-slate-400 mt-1">Ctrl+Enter para enviar</p>
           </div>
         </div>
+      )}
+
+      {/* ── Modal: Detalhe Morador ── */}
+      {detailOcorrencia && (
+        <Modal open={openDetail} onClose={() => setOpenDetail(false)} title={detailOcorrencia.titulo}>
+          <div className="space-y-5">
+            {/* Badges tipo + prioridade */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${tipoVariant[detailOcorrencia.tipo] === 'danger' ? 'bg-red-100 text-red-700' : tipoVariant[detailOcorrencia.tipo] === 'warning' ? 'bg-orange-100 text-orange-700' : tipoVariant[detailOcorrencia.tipo] === 'info' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
+                {tipoLabel[detailOcorrencia.tipo]}
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${prioridadeStyle[detailOcorrencia.prioridade]}`}>
+                {detailOcorrencia.prioridade}
+              </span>
+            </div>
+
+            {/* Pipeline de estado (read-only) */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Estado atual</p>
+              <div className="flex items-center gap-1 flex-wrap">
+                {PIPELINE.map((step, i) => {
+                  const currentIdx = PIPELINE.findIndex(s => s.estado === detailOcorrencia.estado)
+                  const isPast = i < currentIdx
+                  const isCurrent = i === currentIdx
+                  return (
+                    <React.Fragment key={step.estado}>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                        isCurrent ? 'bg-blue-600 text-white' :
+                        isPast ? 'bg-slate-200 text-slate-500 line-through' :
+                        'bg-slate-100 text-slate-400'
+                      }`}>
+                        {step.label}
+                      </span>
+                      {i < PIPELINE.length - 1 && (
+                        <span className={`text-xs ${isPast ? 'text-slate-400' : 'text-slate-200'}`}>›</span>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Atualizações públicas do administrador */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Atualizações ({detailOcorrencia.notas.filter(n => !n.interna).length})
+              </p>
+              {detailOcorrencia.notas.filter(n => !n.interna).length === 0 ? (
+                <p className="text-sm text-slate-400 italic">Ainda sem atualizações.</p>
+              ) : (
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  {detailOcorrencia.notas.filter(n => !n.interna).map(n => {
+                    const isMine = n.autor === profile?.nome
+                    return (
+                      <div key={n.id} className={`rounded-xl p-3 text-sm ${isMine ? 'bg-slate-50 border border-slate-200' : 'bg-blue-50 border border-blue-100'}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-xs font-semibold ${isMine ? 'text-slate-600' : 'text-blue-700'}`}>{n.autor}</span>
+                          <span className="text-xs text-slate-400">{formatDateTime(n.created_at)}</span>
+                        </div>
+                        <p className="text-slate-700 leading-snug">{n.texto}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Resposta do morador */}
+            {detailOcorrencia.estado !== 'fechada' && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Adicionar comentário</p>
+                <div className="flex gap-2">
+                  <textarea
+                    value={moradorResposta}
+                    onChange={e => setMoradorResposta(e.target.value)}
+                    placeholder="Escreva um comentário ou pergunta..."
+                    rows={2}
+                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                    onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) enviarRespostaMorador() }}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={enviarRespostaMorador}
+                    disabled={!moradorResposta.trim()}
+                    className="self-end"
+                  >
+                    <Send size={14} />
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Ctrl+Enter para enviar</p>
+              </div>
+            )}
+          </div>
+        </Modal>
       )}
 
       {/* ── Modal: Nova Ocorrência ── */}
