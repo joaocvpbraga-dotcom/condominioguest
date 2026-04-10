@@ -64,7 +64,7 @@ export function MoradoresPage() {
 
     // Persist to Supabase if configured
     if (isSupabaseConfigured && profile?.condominio_id) {
-      const { error } = await supabase.from('moradores').upsert({
+      const { error } = await supabase.from('profiles').upsert({
         id: moradorData.id,
         nome: moradorData.nome,
         email: moradorData.email,
@@ -97,7 +97,7 @@ export function MoradoresPage() {
   async function handleDeleteMorador(m: Profile) {
     if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('moradores').delete().eq('id', m.id)
+      const { error } = await supabase.from('profiles').delete().eq('id', m.id)
       if (error && error.code !== 'PGRST116') {
         console.error('Erro ao eliminar morador:', error)
         return

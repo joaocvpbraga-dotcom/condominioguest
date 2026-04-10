@@ -47,7 +47,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     const condominioId = profile.condominio_id
 
     supabase
-      .from('moradores')
+      .from('profiles')
       .select('*')
       .eq('condominio_id', condominioId)
       .then(({ data, error }) => {
