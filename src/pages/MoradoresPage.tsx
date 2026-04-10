@@ -6,8 +6,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { getInitials, formatDate } from '@/lib/utils'
-import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, UserCheck, RefreshCw } from 'lucide-react'
-import type { Profile, Fracao } from '@/types'
+import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, UserCheck, RefreshCw, ShieldCheck } from 'lucide-react'
+import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured, createIsolatedClient } from '@/lib/supabase'
@@ -19,10 +19,31 @@ const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', frac
 const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
 
 export function MoradoresPage() {
-  const [tab, setTab] = useState<'moradores' | 'fracoes' | 'utilizadores'>('moradores')
+  const [tab, setTab] = useState<'moradores' | 'fracoes' | 'utilizadores' | 'permissoes'>('moradores')
+
+  // Permissões helpers
+  const PERM_KEYS: (keyof Omit<PermissoesMorador, 'morador_id'>)[] = ['piscina', 'ginasio', 'estacionamento', 'sala_condominio', 'lavandaria', 'terracos']
+  const PERM_LABELS: Record<string, string> = { piscina: 'Piscina', ginasio: 'Ginásio', estacionamento: 'Estacionamento', sala_condominio: 'Sala Condomínio', lavandaria: 'Lavandaria', terracos: 'Terraços' }
+
+  function getPermissoes(moradorId: string): PermissoesMorador {
+    return permissoes.find(p => p.morador_id === moradorId) ?? {
+      morador_id: moradorId, piscina: false, ginasio: false, estacionamento: false, sala_condominio: false, lavandaria: false, terracos: false,
+    }
+  }
+
+  function togglePermissao(moradorId: string, key: keyof Omit<PermissoesMorador, 'morador_id'>) {
+    setPermissoes(prev => {
+      const existing = prev.find(p => p.morador_id === moradorId)
+      if (existing) {
+        return prev.map(p => p.morador_id === moradorId ? { ...p, [key]: !p[key] } : p)
+      }
+      const newPerm: PermissoesMorador = { morador_id: moradorId, piscina: false, ginasio: false, estacionamento: false, sala_condominio: false, lavandaria: false, terracos: false, [key]: true }
+      return [...prev, newPerm]
+    })
+  }
 
   // Moradores & Frações — persisted in AppDataContext
-  const { moradores, setMoradores, fracoes, setFracoes } = useAppData()
+  const { moradores, setMoradores, fracoes, setFracoes, permissoes, setPermissoes } = useAppData()
   const { profile } = useAuth()
 
   // Utilizadores registados no Supabase
@@ -236,7 +257,7 @@ export function MoradoresPage() {
           <p className="text-slate-500 mt-1">Gerencie os moradores, proprietários e unidades</p>
         </div>
         <Button onClick={tab === 'moradores' ? openCreateMorador : tab === 'fracoes' ? openCreateFracao : undefined}
-          className={tab === 'utilizadores' ? 'invisible' : ''}>
+          className={tab === 'utilizadores' || tab === 'permissoes' ? 'invisible' : ''}>
           <Plus size={16} /> {tab === 'moradores' ? 'Novo Morador' : 'Nova Fração'}
         </Button>
       </div>
@@ -262,6 +283,12 @@ export function MoradoresPage() {
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === 'utilizadores' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
           <UserCheck size={15} /> Utilizadores
+        </button>
+        <button
+          onClick={() => setTab('permissoes')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === 'permissoes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          <ShieldCheck size={15} /> Permissões
         </button>
       </div>
 
@@ -419,6 +446,51 @@ export function MoradoresPage() {
                 </table>
               </div>
             </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab Permissões ── */}
+      {tab === 'permissoes' && (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500 mb-4">Gerencie o acesso de cada morador/inquilino aos espaços comuns.</p>
+          {moradores.filter(m => m.role !== 'admin').length === 0 ? (
+            <div className="text-center py-16 text-slate-400 text-sm">Nenhum morador registado.</div>
+          ) : (
+            moradores.filter(m => m.role !== 'admin').map(m => {
+              const perm = getPermissoes(m.id)
+              const fracao = fracoes.find(f => f.proprietario_id === m.id)
+              return (
+                <Card key={m.id}>
+                  <div className="px-5 py-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
+                        {m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-800 text-sm">{m.nome}</p>
+                        <p className="text-xs text-slate-400">{fracao ? `Fração ${fracao.numero}` : 'Sem fração'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {PERM_KEYS.map(key => {
+                        const allowed = perm[key]
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => togglePermissao(m.id, key)}
+                            className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${allowed ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'}`}
+                          >
+                            <span>{PERM_LABELS[key]}</span>
+                            <span className="text-base">{allowed ? '✓' : '✗'}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              )
+            })
           )}
         </div>
       )}

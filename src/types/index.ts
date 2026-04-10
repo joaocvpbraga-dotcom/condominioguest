@@ -157,6 +157,30 @@ export interface Manutencao {
   fornecedor?: Fornecedor
 }
 
+export interface Obra {
+  id: string
+  condominio_id: string
+  titulo: string
+  descricao?: string
+  estado: 'necessaria' | 'aprovada' | 'em_curso' | 'concluida' | 'cancelada'
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente'
+  custo_estimado?: number
+  custo_real?: number
+  data_prevista?: string
+  data_conclusao?: string
+  created_at: string
+}
+
+export interface PermissoesMorador {
+  morador_id: string
+  piscina: boolean
+  ginasio: boolean
+  estacionamento: boolean
+  sala_condominio: boolean
+  lavandaria: boolean
+  terracos: boolean
+}
+
 export interface RegistoCaixa {
   id: string
   condominio_id: string

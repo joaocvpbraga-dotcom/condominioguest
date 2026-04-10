@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao, RegistoCaixa, RecebimentoTrimestral } from '@/types'
+import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao, RegistoCaixa, RecebimentoTrimestral, Obra, PermissoesMorador } from '@/types'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -26,6 +26,10 @@ interface AppDataContextType {
   setRegistosCaixa: React.Dispatch<React.SetStateAction<RegistoCaixa[]>>
   recebimentos: RecebimentoTrimestral[]
   setRecebimentos: React.Dispatch<React.SetStateAction<RecebimentoTrimestral[]>>
+  obras: Obra[]
+  setObras: React.Dispatch<React.SetStateAction<Obra[]>>
+  permissoes: PermissoesMorador[]
+  setPermissoes: React.Dispatch<React.SetStateAction<PermissoesMorador[]>>
 }
 
 const AppDataContext = createContext<AppDataContextType | null>(null)
@@ -87,6 +91,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [manutencoes, setManutencoes] = useState<Manutencao[]>(() => loadLS('cg_manutencoes', []))
   const [registosCaixa, setRegistosCaixa] = useState<RegistoCaixa[]>(() => loadLS('cg_registos_caixa', []))
   const [recebimentos, setRecebimentos] = useState<RecebimentoTrimestral[]>(() => loadLS('cg_recebimentos', []))
+  const [obras, setObras] = useState<Obra[]>(() => loadLS('cg_obras', []))
+  const [permissoes, setPermissoes] = useState<PermissoesMorador[]>(() => loadLS('cg_permissoes', []))
 
   useEffect(() => { localStorage.setItem('cg_moradores', JSON.stringify(moradores)) }, [moradores])
   useEffect(() => { localStorage.setItem('cg_fracoes', JSON.stringify(fracoes)) }, [fracoes])
@@ -99,6 +105,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('cg_manutencoes', JSON.stringify(manutencoes)) }, [manutencoes])
   useEffect(() => { localStorage.setItem('cg_registos_caixa', JSON.stringify(registosCaixa)) }, [registosCaixa])
   useEffect(() => { localStorage.setItem('cg_recebimentos', JSON.stringify(recebimentos)) }, [recebimentos])
+  useEffect(() => { localStorage.setItem('cg_obras', JSON.stringify(obras)) }, [obras])
+  useEffect(() => { localStorage.setItem('cg_permissoes', JSON.stringify(permissoes)) }, [permissoes])
 
   return (
     <AppDataContext.Provider value={{
@@ -113,6 +121,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       manutencoes, setManutencoes,
       registosCaixa, setRegistosCaixa,
       recebimentos, setRecebimentos,
+      obras, setObras,
+      permissoes, setPermissoes,
     }}>
       {children}
     </AppDataContext.Provider>

@@ -22,6 +22,7 @@ export function QuotasPage() {
     id: f.id,
     label: f.numero,
     proprietario: f.proprietario?.nome ?? '—',
+    permilagem: f.permilagem ?? 0,
   }))
 
   function fracaoLabel(id: string) {
@@ -44,7 +45,9 @@ export function QuotasPage() {
   const [massModal, setMassModal] = useState(false)
   const [massForm, setMassForm] = useState({
     descricao: '',
+    modo: 'fixo' as 'fixo' | 'permilagem',
     valor: '85',
+    totalValor: '',
     data_vencimento: '',
     selectedFracoes: [] as string[],
   })
@@ -108,17 +111,29 @@ export function QuotasPage() {
 
   function emitirEmMassa() {
     setMassLoading(true)
+    const somaPermilagem = massForm.selectedFracoes.reduce((sum, fid) => {
+      return sum + (FRACOES.find(f => f.id === fid)?.permilagem ?? 0)
+    }, 0)
     setTimeout(() => {
-      const novas: Quota[] = massForm.selectedFracoes.map((fid, i) => ({
-        id: `new-${Date.now()}-${i}`,
-        condominio_id: 'c1',
-        fracao_id: fid,
-        descricao: massForm.descricao,
-        valor: parseFloat(massForm.valor),
-        data_vencimento: massForm.data_vencimento,
-        estado: 'pendente',
-        created_at: new Date().toISOString(),
-      }))
+      const novas: Quota[] = massForm.selectedFracoes.map((fid, i) => {
+        let valor: number
+        if (massForm.modo === 'permilagem' && somaPermilagem > 0) {
+          const pm = FRACOES.find(f => f.id === fid)?.permilagem ?? 0
+          valor = parseFloat(((pm / somaPermilagem) * parseFloat(massForm.totalValor || '0')).toFixed(2))
+        } else {
+          valor = parseFloat(massForm.valor)
+        }
+        return {
+          id: `new-${Date.now()}-${i}`,
+          condominio_id: 'c1',
+          fracao_id: fid,
+          descricao: massForm.descricao,
+          valor,
+          data_vencimento: massForm.data_vencimento,
+          estado: 'pendente',
+          created_at: new Date().toISOString(),
+        }
+      })
       setQuotas(prev => [...prev, ...novas])
       setMassLoading(false)
       setMassSuccess(true)
@@ -128,7 +143,7 @@ export function QuotasPage() {
   function closeMass() {
     setMassModal(false)
     setMassSuccess(false)
-    setMassForm({ descricao: '', valor: '85', data_vencimento: '', selectedFracoes: [] })
+    setMassForm({ descricao: '', modo: 'fixo', valor: '85', totalValor: '', data_vencimento: '', selectedFracoes: [] })
   }
 
   function toggleFracao(id: string) {
@@ -372,14 +387,41 @@ export function QuotasPage() {
                 onChange={e => setMassForm({ ...massForm, descricao: e.target.value })}
                 placeholder="Ex: Quota Mensal — Maio 2026"
               />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Modo de cálculo</label>
+                <div className="flex gap-3">
+                  {(['fixo', 'permilagem'] as const).map(m => (
+                    <label key={m} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="modo"
+                        value={m}
+                        checked={massForm.modo === m}
+                        onChange={() => setMassForm(p => ({ ...p, modo: m }))}
+                        className="text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">{m === 'fixo' ? 'Valor fixo / fração' : 'Por permilagem (‰)'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {massForm.modo === 'fixo' ? (
               <Input
                 label="Valor por fração (€)"
-                type="number"
-                step="0.01"
+                type="number" step="0.01"
                 value={massForm.valor}
                 onChange={e => setMassForm({ ...massForm, valor: e.target.value })}
               />
-            </div>
+            ) : (
+              <Input
+                label="Montante total a distribuir (€)"
+                type="number" step="0.01"
+                value={massForm.totalValor}
+                onChange={e => setMassForm({ ...massForm, totalValor: e.target.value })}
+                placeholder="Ex: 5000.00 — distribuído pela permilagem"
+              />
+            )}
             <Input
               label="Data de Vencimento"
               type="date"
@@ -425,15 +467,42 @@ export function QuotasPage() {
             </div>
 
             {/* Preview */}
-            {massForm.selectedFracoes.length > 0 && massForm.valor && (
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Total a emitir</p>
-                  <p className="text-xs text-slate-400">{massForm.selectedFracoes.length} frações × {formatCurrency(parseFloat(massForm.valor) || 0)}</p>
-                </div>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency((parseFloat(massForm.valor) || 0) * massForm.selectedFracoes.length)}
-                </p>
+            {massForm.selectedFracoes.length > 0 && (massForm.modo === 'fixo' ? massForm.valor : massForm.totalValor) && (
+              <div className="bg-slate-50 rounded-xl p-4">
+                {massForm.modo === 'fixo' ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Total a emitir</p>
+                      <p className="text-xs text-slate-400">{massForm.selectedFracoes.length} frações × {formatCurrency(parseFloat(massForm.valor) || 0)}</p>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatCurrency((parseFloat(massForm.valor) || 0) * massForm.selectedFracoes.length)}
+                    </p>
+                  </div>
+                ) : (() => {
+                  const total = parseFloat(massForm.totalValor) || 0
+                  const somaPermilagem = massForm.selectedFracoes.reduce((s, fid) => s + (FRACOES.find(f => f.id === fid)?.permilagem ?? 0), 0)
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-medium text-slate-700">Distribuição por permilagem</p>
+                        <p className="text-xl font-bold text-blue-600">{formatCurrency(total)} total</p>
+                      </div>
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {massForm.selectedFracoes.map(fid => {
+                          const f = FRACOES.find(x => x.id === fid)!
+                          const val = somaPermilagem > 0 ? (f.permilagem / somaPermilagem) * total : 0
+                          return (
+                            <div key={fid} className="flex justify-between text-xs text-slate-600">
+                              <span>Fração {f.label} <span className="text-slate-400">({f.permilagem}‰)</span></span>
+                              <span className="font-medium">{formatCurrency(val)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
@@ -442,7 +511,7 @@ export function QuotasPage() {
               <Button
                 onClick={emitirEmMassa}
                 loading={massLoading}
-                disabled={!massForm.descricao || !massForm.valor || !massForm.data_vencimento || massForm.selectedFracoes.length === 0}
+                disabled={!massForm.descricao || !massForm.data_vencimento || massForm.selectedFracoes.length === 0 || (massForm.modo === 'fixo' ? !massForm.valor : !massForm.totalValor)}
               >
                 <Zap size={15} /> Emitir {massForm.selectedFracoes.length} Quotas
               </Button>

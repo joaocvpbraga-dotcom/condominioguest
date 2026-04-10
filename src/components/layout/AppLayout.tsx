@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
+import { FracaoOnboardingModal } from '@/components/FracaoOnboardingModal'
 
 export function AppLayout() {
   return (
@@ -8,6 +9,7 @@ export function AppLayout() {
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
         <Outlet />
       </main>
+      <FracaoOnboardingModal />
     </div>
   )
 }
