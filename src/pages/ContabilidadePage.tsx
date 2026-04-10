@@ -8,10 +8,14 @@ import { formatCurrency } from '@/lib/utils'
 import { PiggyBank, Plus, TrendingUp, TrendingDown } from 'lucide-react'
 import type { Orcamento } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function ContabilidadePage() {
   const { rubricas, setRubricas } = useAppData()
-  const [tipoFilter, setTipoFilter] = useState('todos')
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+
+  const [tipoFilter, setTipoFilter] = useState(isAdmin ? 'todos' : 'despesa')
   const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({ rubrica: '', tipo: 'despesa', valor_previsto: '', descricao: '' })
 
@@ -28,44 +32,52 @@ export function ContabilidadePage() {
           <h1 className="text-2xl font-bold text-slate-800">Contabilidade</h1>
           <p className="text-slate-500 mt-1">Orçamento e controlo financeiro</p>
         </div>
-        <Button onClick={() => setOpenModal(true)}>
-          <Plus size={16} /> Nova Rubrica
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setOpenModal(true)}>
+            <Plus size={16} /> Nova Rubrica
+          </Button>
+        )}
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="rounded-xl p-5 bg-green-50">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={18} className="text-green-600" />
-            <p className="text-sm font-medium text-slate-700">Receitas Realizadas</p>
+      <div className={`grid grid-cols-1 gap-4 mb-8 ${isAdmin ? 'sm:grid-cols-3' : 'sm:grid-cols-1 max-w-xs'}`}>
+        {isAdmin && (
+          <div className="rounded-xl p-5 bg-green-50">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp size={18} className="text-green-600" />
+              <p className="text-sm font-medium text-slate-700">Receitas Realizadas</p>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceitas)}</p>
           </div>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceitas)}</p>
-        </div>
+        )}
         <div className="rounded-xl p-5 bg-red-50">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown size={18} className="text-red-600" />
-            <p className="text-sm font-medium text-slate-700">Despesas Realizadas</p>
+            <p className="text-sm font-medium text-slate-700">Total Despesas</p>
           </div>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(totalDespesas)}</p>
         </div>
-        <div className={`rounded-xl p-5 ${saldo >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <PiggyBank size={18} className={saldo >= 0 ? 'text-blue-600' : 'text-orange-600'} />
-            <p className="text-sm font-medium text-slate-700">Saldo</p>
+        {isAdmin && (
+          <div className={`rounded-xl p-5 ${saldo >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <PiggyBank size={18} className={saldo >= 0 ? 'text-blue-600' : 'text-orange-600'} />
+              <p className="text-sm font-medium text-slate-700">Saldo</p>
+            </div>
+            <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{formatCurrency(saldo)}</p>
           </div>
-          <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{formatCurrency(saldo)}</p>
-        </div>
+        )}
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 mb-4">
-        {['todos', 'receita', 'despesa'].map(f => (
-          <button key={f} onClick={() => setTipoFilter(f)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${tipoFilter === f ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-            {f === 'todos' ? 'Todos' : f === 'receita' ? 'Receitas' : 'Despesas'}
-          </button>
-        ))}
-      </div>
+      {/* Filter — admin only */}
+      {isAdmin && (
+        <div className="flex gap-2 mb-4">
+          {['todos', 'receita', 'despesa'].map(f => (
+            <button key={f} onClick={() => setTipoFilter(f)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${tipoFilter === f ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              {f === 'todos' ? 'Todos' : f === 'receita' ? 'Receitas' : 'Despesas'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <Card>
         <div className="overflow-x-auto">

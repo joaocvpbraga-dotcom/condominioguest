@@ -37,8 +37,8 @@ function App() {
             <Route path="ocorrencias" element={<OcorrenciasPage />} />
             <Route path="comunicados" element={<AdminRoute><ComunicadosPage /></AdminRoute>} />
             <Route path="documentos" element={<DocumentosPage />} />
-            <Route path="contabilidade" element={<AdminRoute><ContabilidadePage /></AdminRoute>} />
-            <Route path="manutencoes" element={<AdminRoute><ManutencoesPage /></AdminRoute>} />
+            <Route path="contabilidade" element={<ContabilidadePage />} />
+            <Route path="manutencoes" element={<ManutencoesPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

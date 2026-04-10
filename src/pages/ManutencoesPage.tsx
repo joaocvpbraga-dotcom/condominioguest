@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Wrench, Plus, Building2, Phone, Mail } from 'lucide-react'
+import { Wrench, Plus, Building2, Phone, Mail, CheckCircle2 } from 'lucide-react'
 import type { Fornecedor, Manutencao } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 
 const mEstadoVariant: Record<string, 'success' | 'info' | 'warning' | 'default'> = {
@@ -20,6 +21,9 @@ const mEstadoLabel: Record<string, string> = {
 export function ManutencoesPage() {
   const [tab, setTab] = useState<'manutencoes' | 'fornecedores'>('manutencoes')
   const { fornecedores, setFornecedores, manutencoes, setManutencoes } = useAppData()
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+
   const [openModal, setOpenModal] = useState(false)
   const [openFornModal, setOpenFornModal] = useState(false)
   const [form, setForm] = useState({ titulo: '', estado: 'agendada', fornecedor_id: '', data_agendada: '', custo: '', descricao: '' })
@@ -29,26 +33,30 @@ export function ManutencoesPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Manutenções & Fornecedores</h1>
-          <p className="text-slate-500 mt-1">Gestão de serviços e manutenções</p>
+          <h1 className="text-2xl font-bold text-slate-800">Manutenções{isAdmin ? ' & Fornecedores' : ''}</h1>
+          <p className="text-slate-500 mt-1">{isAdmin ? 'Gestão de serviços e manutenções' : 'Manutenções realizadas no condomínio'}</p>
         </div>
-        <Button onClick={() => tab === 'manutencoes' ? setOpenModal(true) : setOpenFornModal(true)}>
-          <Plus size={16} /> {tab === 'manutencoes' ? 'Nova Manutenção' : 'Novo Fornecedor'}
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => tab === 'manutencoes' ? setOpenModal(true) : setOpenFornModal(true)}>
+            <Plus size={16} /> {tab === 'manutencoes' ? 'Nova Manutenção' : 'Novo Fornecedor'}
+          </Button>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
-        {(['manutencoes', 'fornecedores'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            {t === 'manutencoes' ? 'Manutenções' : 'Fornecedores'}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — admin only */}
+      {isAdmin && (
+        <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
+          {(['manutencoes', 'fornecedores'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              {t === 'manutencoes' ? 'Manutenções' : 'Fornecedores'}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'manutencoes' && (
+      {(tab === 'manutencoes' || !isAdmin) && (
         <div className="space-y-3">
-          {manutencoes.map(m => (
+          {(isAdmin ? manutencoes : manutencoes.filter(m => m.estado === 'concluida')).map(m => (
             <Card key={m.id}>
               <div className="px-5 py-4 flex items-start gap-4">
                 <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
@@ -65,7 +73,7 @@ export function ManutencoesPage() {
                     {m.custo !== undefined && <span className="font-medium text-slate-700">{formatCurrency(m.custo)}</span>}
                   </div>
                 </div>
-                {m.estado === 'em_curso' && <Button size="sm">Concluir</Button>}
+                {m.estado === 'em_curso' && isAdmin && <Button size="sm">Concluir</Button>}
               </div>
             </Card>
           ))}
