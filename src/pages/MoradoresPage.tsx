@@ -9,6 +9,8 @@ import { getInitials, formatDate } from '@/lib/utils'
 import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2 } from 'lucide-react'
 import type { Profile, Fracao } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
@@ -21,6 +23,7 @@ export function MoradoresPage() {
 
   // Moradores & Frações — persisted in AppDataContext
   const { moradores, setMoradores, fracoes, setFracoes } = useAppData()
+  const { profile } = useAuth()
 
   const [search, setSearch] = useState('')
   const [openMorador, setOpenMorador] = useState(false)
@@ -51,13 +54,28 @@ export function MoradoresPage() {
     setOpenMorador(true)
   }
 
-  function handleMoradorSubmit(e: React.FormEvent) {
+  async function handleMoradorSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!formMorador.nome || !formMorador.email) return
-    const moradorId = editMorador ? editMorador.id : `m-${Date.now()}`
+    const moradorId = editMorador ? editMorador.id : crypto.randomUUID()
     const moradorData: Profile = editMorador
       ? { ...editMorador, nome: formMorador.nome, email: formMorador.email, telefone: formMorador.telefone || undefined, role: formMorador.role as Profile['role'] }
-      : { id: moradorId, nome: formMorador.nome, email: formMorador.email, telefone: formMorador.telefone || undefined, role: formMorador.role as Profile['role'], created_at: new Date().toISOString() }
+      : { id: moradorId, nome: formMorador.nome, email: formMorador.email, telefone: formMorador.telefone || undefined, role: formMorador.role as Profile['role'], condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+
+    // Persist to Supabase if configured
+    if (isSupabaseConfigured && profile?.condominio_id) {
+      const { error } = await supabase.from('moradores').upsert({
+        id: moradorData.id,
+        nome: moradorData.nome,
+        email: moradorData.email,
+        telefone: moradorData.telefone ?? null,
+        role: moradorData.role,
+        condominio_id: profile.condominio_id,
+        created_at: moradorData.created_at,
+      })
+      if (error) console.error('Erro ao guardar morador:', error)
+    }
+
     if (editMorador) {
       setMoradores(prev => prev.map(m => m.id === editMorador.id ? moradorData : m))
     } else {
@@ -96,20 +114,42 @@ export function MoradoresPage() {
     setOpenFracao(true)
   }
 
-  function handleFracaoSubmit(e: React.FormEvent) {
+  async function handleFracaoSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!formFracao.numero) return
     const proprietario = moradores.find(m => m.id === formFracao.proprietario_id)
+    const condominioId = profile?.condominio_id ?? 'c1'
+
     if (editFracao) {
-      setFracoes(prev => prev.map(f =>
-        f.id === editFracao.id
-          ? { ...f, numero: formFracao.numero, andar: formFracao.andar || undefined, tipo: formFracao.tipo, area: formFracao.area ? parseFloat(formFracao.area) : undefined, permilagem: parseFloat(formFracao.permilagem) || 0, proprietario_id: formFracao.proprietario_id || undefined, proprietario }
-          : f
-      ))
+      const updated: Fracao = {
+        ...editFracao,
+        numero: formFracao.numero,
+        andar: formFracao.andar || undefined,
+        tipo: formFracao.tipo,
+        area: formFracao.area ? parseFloat(formFracao.area) : undefined,
+        permilagem: parseFloat(formFracao.permilagem) || 0,
+        proprietario_id: formFracao.proprietario_id || undefined,
+        proprietario,
+      }
+      if (isSupabaseConfigured && profile?.condominio_id) {
+        const { error } = await supabase.from('fracoes').upsert({
+          id: updated.id,
+          condominio_id: condominioId,
+          numero: updated.numero,
+          andar: updated.andar ?? null,
+          tipo: updated.tipo,
+          area: updated.area ?? null,
+          permilagem: updated.permilagem,
+          proprietario_id: updated.proprietario_id ?? null,
+          created_at: updated.created_at,
+        })
+        if (error) console.error('Erro ao guardar fração:', error)
+      }
+      setFracoes(prev => prev.map(f => f.id === editFracao.id ? updated : f))
     } else {
-      setFracoes(prev => [...prev, {
-        id: `f-${Date.now()}`,
-        condominio_id: 'c1',
+      const newFracao: Fracao = {
+        id: crypto.randomUUID(),
+        condominio_id: condominioId,
         numero: formFracao.numero,
         andar: formFracao.andar || undefined,
         tipo: formFracao.tipo,
@@ -118,7 +158,22 @@ export function MoradoresPage() {
         proprietario_id: formFracao.proprietario_id || undefined,
         proprietario,
         created_at: new Date().toISOString(),
-      }])
+      }
+      if (isSupabaseConfigured && profile?.condominio_id) {
+        const { error } = await supabase.from('fracoes').upsert({
+          id: newFracao.id,
+          condominio_id: condominioId,
+          numero: newFracao.numero,
+          andar: newFracao.andar ?? null,
+          tipo: newFracao.tipo,
+          area: newFracao.area ?? null,
+          permilagem: newFracao.permilagem,
+          proprietario_id: newFracao.proprietario_id ?? null,
+          created_at: newFracao.created_at,
+        })
+        if (error) console.error('Erro ao guardar fração:', error)
+      }
+      setFracoes(prev => [...prev, newFracao])
     }
     setOpenFracao(false)
     setEditFracao(null)

@@ -47,11 +47,12 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     const condominioId = profile.condominio_id
 
     supabase
-      .from('profiles')
+      .from('moradores')
       .select('*')
       .eq('condominio_id', condominioId)
       .then(({ data, error }) => {
-        if (!error && data) setMoradores(data as Profile[])
+        if (error) { console.error('moradores fetch error:', error); return }
+        if (data) setMoradores(data as Profile[])
       })
 
     supabase
@@ -59,7 +60,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       .select('*, proprietario:proprietario_id(*)')
       .eq('condominio_id', condominioId)
       .then(({ data, error }) => {
-        if (!error && data) setFracoes(data as Fracao[])
+        if (error) { console.error('fracoes fetch error:', error); return }
+        if (data) setFracoes(data as Fracao[])
       })
   }, [profile?.condominio_id])
   const [quotas, setQuotas] = useState<Quota[]>(() => loadLS('cg_quotas', []))
