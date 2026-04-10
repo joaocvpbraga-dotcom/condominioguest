@@ -92,7 +92,7 @@ export function DashboardPage() {
 
   // Ocorrências urgentes abertas
   const urgentes = ocorrencias.filter(o =>
-    (o.prioridade === 'urgente' || o.tipo === 'risco') && o.estado === 'aberta'
+    (o.prioridade === 'urgente' || o.tipo === 'risco') && (o.estado === 'aberta' || o.estado === 'aceite' || o.estado === 'em_analise')
   )
 
   return (

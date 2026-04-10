@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext'
 // ── Configs ───────────────────────────────────────────────────
 const PIPELINE: Array<{ estado: string; label: string; color: string; icon: React.ReactNode }> = [
   { estado: 'aberta', label: 'Aberta', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', icon: <AlertTriangle size={14} /> },
+  { estado: 'aceite', label: 'Aceite', color: 'text-purple-600 bg-purple-50 border-purple-200', icon: <ChevronRight size={14} /> },
   { estado: 'em_analise', label: 'Em Análise', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: <Clock size={14} /> },
   { estado: 'resolvida', label: 'Resolvida', color: 'text-green-600 bg-green-50 border-green-200', icon: <CheckCircle2 size={14} /> },
   { estado: 'fechada', label: 'Fechada', color: 'text-slate-500 bg-slate-50 border-slate-200', icon: <XCircle size={14} /> },
@@ -33,7 +34,7 @@ const prioridadeStyle: Record<string, string> = {
   baixa: 'bg-slate-100 text-slate-600 border border-slate-200',
 }
 const estadoVariant: Record<string, 'warning' | 'info' | 'success' | 'default'> = {
-  aberta: 'warning', em_analise: 'info', resolvida: 'success', fechada: 'default',
+  aberta: 'warning', aceite: 'default', em_analise: 'info', resolvida: 'success', fechada: 'default',
 }
 
 export function OcorrenciasPage() {

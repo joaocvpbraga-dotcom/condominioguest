@@ -50,7 +50,7 @@ export interface Ocorrencia {
   titulo: string
   descricao: string
   tipo: 'reclamacao' | 'avaria' | 'sugestao' | 'risco' | 'intervencao' | 'outro'
-  estado: 'aberta' | 'em_analise' | 'resolvida' | 'fechada'
+  estado: 'aberta' | 'aceite' | 'em_analise' | 'resolvida' | 'fechada'
   prioridade: 'baixa' | 'media' | 'alta' | 'urgente'
   autor_id: string
   autor_nome?: string
