@@ -64,6 +64,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         if (data) setFracoes(data as Fracao[])
       })
   }, [profile?.condominio_id])
+
+  // Always ensure the logged-in user appears in the moradores list
+  useEffect(() => {
+    if (!profile) return
+    setMoradores(prev => {
+      const exists = prev.some(m => m.id === profile.id)
+      if (exists) return prev
+      return [profile, ...prev]
+    })
+  }, [profile])
   const [quotas, setQuotas] = useState<Quota[]>(() => loadLS('cg_quotas', []))
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaComNotas[]>(() => loadLS('cg_ocorrencias', []))
   const [comunicados, setComunicados] = useState<Comunicado[]>(() => loadLS('cg_comunicados', []))
