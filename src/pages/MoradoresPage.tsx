@@ -60,8 +60,47 @@ export function MoradoresPage() {
 
   const [changingRole, setChangingRole] = useState<string | null>(null)
   const [deletingUser, setDeletingUser] = useState<string | null>(null)
-  // pendingRoles: stores unsaved role changes keyed by user id
   const [pendingRoles, setPendingRoles] = useState<Record<string, Profile['role']>>({})
+  const [openNovoUser, setOpenNovoUser] = useState(false)
+  const [novoUserForm, setNovoUserForm] = useState({ nome: '', email: '', senha: '', role: 'morador' as Profile['role'] })
+  const [savingNovoUser, setSavingNovoUser] = useState(false)
+
+  async function handleNovoUtilizador(e: React.FormEvent) {
+    e.preventDefault()
+    if (!novoUserForm.nome || !novoUserForm.email || !novoUserForm.senha) return
+    setSavingNovoUser(true)
+    let userId = crypto.randomUUID()
+
+    if (isSupabaseConfigured && profile?.condominio_id) {
+      if (adminSupabase) {
+        const { data: created, error } = await adminSupabase.auth.admin.createUser({
+          email: novoUserForm.email,
+          password: novoUserForm.senha,
+          email_confirm: true,
+        })
+        if (error) { alert(`Erro ao criar login: ${error.message}`); setSavingNovoUser(false); return }
+        if (created.user) userId = created.user.id
+      } else {
+        const isolated = createIsolatedClient()
+        const { data: signUpData, error } = await isolated.auth.signUp({ email: novoUserForm.email, password: novoUserForm.senha })
+        if (error) { alert(`Erro ao criar login: ${error.message}`); setSavingNovoUser(false); return }
+        if (signUpData.user) userId = signUpData.user.id
+      }
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: userId, nome: novoUserForm.nome, email: novoUserForm.email,
+        role: novoUserForm.role, condominio_id: profile.condominio_id,
+        created_at: new Date().toISOString(),
+      })
+      if (profileError) { alert(`Erro ao guardar perfil: ${profileError.message}`); setSavingNovoUser(false); return }
+    }
+
+    const newProfile: Profile = { id: userId, nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+    setUtilizadores(prev => [newProfile, ...prev])
+    setMoradores(prev => [newProfile, ...prev])
+    setNovoUserForm({ nome: '', email: '', senha: '', role: 'morador' })
+    setOpenNovoUser(false)
+    setSavingNovoUser(false)
+  }
 
   async function handleDeleteUtilizador(u: Profile) {
     if (!window.confirm(`Eliminar "${u.nome}" (${u.email})? Esta ação não pode ser desfeita.`)) return
@@ -455,9 +494,14 @@ export function MoradoresPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-slate-500">{utilizadores.length} utilizador(es) registado(s)</p>
-            <Button size="sm" variant="outline" onClick={fetchUtilizadores} disabled={loadingUsers}>
-              <RefreshCw size={14} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setOpenNovoUser(true)}>
+                <Plus size={14} /> Novo Utilizador
+              </Button>
+              <Button size="sm" variant="outline" onClick={fetchUtilizadores} disabled={loadingUsers}>
+                <RefreshCw size={14} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar
+              </Button>
+            </div>
           </div>
           {utilizadores.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-sm">
@@ -594,6 +638,51 @@ export function MoradoresPage() {
           )}
         </div>
       )}
+
+      {/* ── Modal Novo Utilizador ── */}
+      <Modal open={openNovoUser} onClose={() => setOpenNovoUser(false)} title="Novo Utilizador" size="sm">
+        <form className="space-y-4" onSubmit={handleNovoUtilizador}>
+          <Input
+            label="Nome completo"
+            value={novoUserForm.nome}
+            onChange={e => setNovoUserForm({ ...novoUserForm, nome: e.target.value })}
+            placeholder="Ex: Ana Silva"
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={novoUserForm.email}
+            onChange={e => setNovoUserForm({ ...novoUserForm, email: e.target.value })}
+            placeholder="ana@email.com"
+            required
+          />
+          <Input
+            label="Senha de acesso"
+            type="password"
+            value={novoUserForm.senha}
+            onChange={e => setNovoUserForm({ ...novoUserForm, senha: e.target.value })}
+            placeholder="Mínimo 6 caracteres"
+            required
+          />
+          <Select
+            label="Perfil"
+            value={novoUserForm.role}
+            onChange={e => setNovoUserForm({ ...novoUserForm, role: e.target.value as Profile['role'] })}
+            options={[
+              { value: 'morador', label: 'Morador' },
+              { value: 'admin', label: 'Administrador' },
+              { value: 'funcionario', label: 'Funcionário' },
+            ]}
+          />
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="outline" type="button" onClick={() => setOpenNovoUser(false)}>Cancelar</Button>
+            <Button type="submit" loading={savingNovoUser}>
+              <Plus size={15} /> Criar Utilizador
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── Modal Morador ── */}
       <Modal
