@@ -16,8 +16,8 @@ import { ManutencoesPage } from '@/pages/ManutencoesPage'
 
 function App() {
   return (
-    <AppDataProvider>
     <AuthProvider>
+    <AppDataProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -42,8 +42,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
     </AppDataProvider>
+    </AuthProvider>
   )
 }
 

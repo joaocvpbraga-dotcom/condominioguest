@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao } from '@/types'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface AppDataContextType {
   moradores: Profile[]
@@ -34,8 +36,32 @@ function loadLS<T>(key: string, fallback: T): T {
 }
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
+  const { profile } = useAuth()
   const [moradores, setMoradores] = useState<Profile[]>(() => loadLS('cg_moradores', []))
   const [fracoes, setFracoes] = useState<Fracao[]>(() => loadLS('cg_fracoes', []))
+
+  // Load moradores & frações from Supabase whenever the condominium changes
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+
+    const condominioId = profile.condominio_id
+
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('condominio_id', condominioId)
+      .then(({ data, error }) => {
+        if (!error && data) setMoradores(data as Profile[])
+      })
+
+    supabase
+      .from('fracoes')
+      .select('*, proprietario:proprietario_id(*)')
+      .eq('condominio_id', condominioId)
+      .then(({ data, error }) => {
+        if (!error && data) setFracoes(data as Fracao[])
+      })
+  }, [profile?.condominio_id])
   const [quotas, setQuotas] = useState<Quota[]>(() => loadLS('cg_quotas', []))
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaComNotas[]>(() => loadLS('cg_ocorrencias', []))
   const [comunicados, setComunicados] = useState<Comunicado[]>(() => loadLS('cg_comunicados', []))
