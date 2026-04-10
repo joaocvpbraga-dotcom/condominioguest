@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { getInitials, formatDate } from '@/lib/utils'
-import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2 } from 'lucide-react'
+import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2 } from 'lucide-react'
 import type { Profile, Fracao } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -92,6 +92,19 @@ export function MoradoresPage() {
     setOpenMorador(false)
     setEditMorador(null)
     setFormMorador(EMPTY_MORADOR)
+  }
+
+  async function handleDeleteMorador(m: Profile) {
+    if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('moradores').delete().eq('id', m.id)
+      if (error) { console.error('Erro ao eliminar morador:', error); return }
+    }
+    setMoradores(prev => prev.filter(x => x.id !== m.id))
+    // Desassociar frações
+    setFracoes(prev => prev.map(f =>
+      f.proprietario_id === m.id ? { ...f, proprietario_id: undefined, proprietario: undefined } : f
+    ))
   }
 
   // ── Frações ───────────────────────────────────────────────
@@ -258,9 +271,14 @@ export function MoradoresPage() {
                         <p className="text-xs text-slate-400">Desde {formatDate(m.created_at)}</p>
                       </div>
                     </div>
-                    <button onClick={() => openEditMorador(m)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors shrink-0">
-                      <Pencil size={15} />
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => openEditMorador(m)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => handleDeleteMorador(m)} title="Eliminar" className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </CardBody>
                 </Card>
               ))}
