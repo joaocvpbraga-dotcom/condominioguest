@@ -10,7 +10,7 @@ import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, User
 import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured, createIsolatedClient } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, createIsolatedClient, adminSupabase } from '@/lib/supabase'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
@@ -67,6 +67,10 @@ export function MoradoresPage() {
     if (!window.confirm(`Eliminar "${u.nome}" (${u.email})? Esta ação não pode ser desfeita.`)) return
     setDeletingUser(u.id)
     if (isSupabaseConfigured) {
+      // Delete from auth.users via admin client (if available)
+      if (adminSupabase) {
+        await adminSupabase.auth.admin.deleteUser(u.id)
+      }
       const { error } = await supabase.from('profiles').delete().eq('id', u.id)
       if (error && error.code !== 'PGRST116') {
         alert(`Erro ao eliminar: ${error.message}`)
@@ -83,7 +87,8 @@ export function MoradoresPage() {
   async function handleRoleChange(u: Profile, newRole: Profile['role']) {
     setChangingRole(u.id)
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', u.id)
+      const client = adminSupabase ?? supabase
+      const { error } = await client.from('profiles').update({ role: newRole }).eq('id', u.id)
       if (error) { alert(`Erro ao alterar perfil: ${error.message}`); setChangingRole(null); return }
     }
     setUtilizadores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
@@ -138,16 +143,31 @@ export function MoradoresPage() {
       // Create Supabase Auth user when creating new morador with password
       let authUserId = moradorData.id
       if (!editMorador && formMorador.senha) {
-        const isolated = createIsolatedClient()
-        const { data: signUpData, error: signUpError } = await isolated.auth.signUp({
-          email: formMorador.email,
-          password: formMorador.senha,
-        })
-        if (signUpError) {
-          alert(`Erro ao criar login: ${signUpError.message}`)
-          return
+        if (adminSupabase) {
+          // Admin client: creates user immediately, no email confirmation needed
+          const { data: created, error: createError } = await adminSupabase.auth.admin.createUser({
+            email: formMorador.email,
+            password: formMorador.senha,
+            email_confirm: true,
+          })
+          if (createError) {
+            alert(`Erro ao criar login: ${createError.message}`)
+            return
+          }
+          if (created.user) authUserId = created.user.id
+        } else {
+          // Fallback: anon signUp (requires email confirmation)
+          const isolated = createIsolatedClient()
+          const { data: signUpData, error: signUpError } = await isolated.auth.signUp({
+            email: formMorador.email,
+            password: formMorador.senha,
+          })
+          if (signUpError) {
+            alert(`Erro ao criar login: ${signUpError.message}`)
+            return
+          }
+          if (signUpData.user) authUserId = signUpData.user.id
         }
-        if (signUpData.user) authUserId = signUpData.user.id
       }
       const { error } = await supabase.from('profiles').upsert({
         id: authUserId,
