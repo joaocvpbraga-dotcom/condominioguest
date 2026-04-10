@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { getInitials, formatDate } from '@/lib/utils'
-import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2 } from 'lucide-react'
+import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, UserCheck, RefreshCw } from 'lucide-react'
 import type { Profile, Fracao } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -19,11 +19,27 @@ const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', frac
 const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
 
 export function MoradoresPage() {
-  const [tab, setTab] = useState<'moradores' | 'fracoes'>('moradores')
+  const [tab, setTab] = useState<'moradores' | 'fracoes' | 'utilizadores'>('moradores')
 
   // Moradores & Frações — persisted in AppDataContext
   const { moradores, setMoradores, fracoes, setFracoes } = useAppData()
   const { profile } = useAuth()
+
+  // Utilizadores registados no Supabase
+  const [utilizadores, setUtilizadores] = useState<Profile[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+  async function fetchUtilizadores() {
+    if (!isSupabaseConfigured) { setUtilizadores(moradores); return }
+    setLoadingUsers(true)
+    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    if (!error && data) setUtilizadores(data as Profile[])
+    setLoadingUsers(false)
+  }
+
+  useEffect(() => {
+    if (tab === 'utilizadores') fetchUtilizadores()
+  }, [tab])
 
   const [search, setSearch] = useState('')
   const [openMorador, setOpenMorador] = useState(false)
@@ -219,7 +235,8 @@ export function MoradoresPage() {
           <h1 className="text-2xl font-bold text-slate-800">Moradores & Frações</h1>
           <p className="text-slate-500 mt-1">Gerencie os moradores, proprietários e unidades</p>
         </div>
-        <Button onClick={tab === 'moradores' ? openCreateMorador : openCreateFracao}>
+        <Button onClick={tab === 'moradores' ? openCreateMorador : tab === 'fracoes' ? openCreateFracao : undefined}
+          className={tab === 'utilizadores' ? 'invisible' : ''}>
           <Plus size={16} /> {tab === 'moradores' ? 'Novo Morador' : 'Nova Fração'}
         </Button>
       </div>
@@ -239,6 +256,12 @@ export function MoradoresPage() {
         >
           <Home size={15} /> Frações
           <span className="ml-1 text-xs text-slate-400">({fracoes.length})</span>
+        </button>
+        <button
+          onClick={() => setTab('utilizadores')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === 'utilizadores' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          <UserCheck size={15} /> Utilizadores
         </button>
       </div>
 
@@ -344,6 +367,60 @@ export function MoradoresPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── Tab Utilizadores ── */}
+      {tab === 'utilizadores' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-slate-500">{utilizadores.length} utilizador(es) registado(s)</p>
+            <Button size="sm" variant="outline" onClick={fetchUtilizadores} disabled={loadingUsers}>
+              <RefreshCw size={14} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar
+            </Button>
+          </div>
+          {utilizadores.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-sm">
+              {loadingUsers ? 'A carregar...' : 'Nenhum utilizador encontrado.'}
+            </div>
+          ) : (
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Utilizador</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Email</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Perfil</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Registado em</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {utilizadores.map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
+                              {getInitials(u.nome)}
+                            </div>
+                            <span className="font-medium text-slate-800">{u.nome}</span>
+                            {u.id === profile?.id && (
+                              <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">Eu</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 text-slate-600">{u.email}</td>
+                        <td className="px-6 py-3">
+                          <Badge variant={roleVariant[u.role] ?? 'default'}>{roleLabels[u.role] ?? u.role}</Badge>
+                        </td>
+                        <td className="px-6 py-3 text-slate-400">{formatDate(u.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* ── Modal Morador ── */}
