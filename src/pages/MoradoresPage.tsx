@@ -58,6 +58,19 @@ export function MoradoresPage() {
     setLoadingUsers(false)
   }
 
+  const [changingRole, setChangingRole] = useState<string | null>(null)
+
+  async function handleRoleChange(u: Profile, newRole: Profile['role']) {
+    setChangingRole(u.id)
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', u.id)
+      if (error) { alert(`Erro ao alterar perfil: ${error.message}`); setChangingRole(null); return }
+    }
+    setUtilizadores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
+    setMoradores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
+    setChangingRole(null)
+  }
+
   useEffect(() => {
     if (tab === 'utilizadores') fetchUtilizadores()
   }, [tab])
@@ -419,6 +432,7 @@ export function MoradoresPage() {
                       <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Email</th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Perfil</th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Registado em</th>
+                      <th className="px-6 py-3" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -440,6 +454,20 @@ export function MoradoresPage() {
                           <Badge variant={roleVariant[u.role] ?? 'default'}>{roleLabels[u.role] ?? u.role}</Badge>
                         </td>
                         <td className="px-6 py-3 text-slate-400">{formatDate(u.created_at)}</td>
+                        <td className="px-6 py-3 text-right">
+                          {u.id !== profile?.id && (
+                            <select
+                              value={u.role}
+                              disabled={changingRole === u.id}
+                              onChange={e => handleRoleChange(u, e.target.value as Profile['role'])}
+                              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:opacity-50 cursor-pointer"
+                            >
+                              <option value="morador">Morador</option>
+                              <option value="admin">Administrador</option>
+                              <option value="funcionario">Funcionário</option>
+                            </select>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
