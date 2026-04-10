@@ -10,12 +10,12 @@ import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2 } fro
 import type { Profile, Fracao } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, createIsolatedClient } from '@/lib/supabase'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
 
-const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '' }
+const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '', senha: '' }
 const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
 
 export function MoradoresPage() {
@@ -50,7 +50,7 @@ export function MoradoresPage() {
   function openEditMorador(m: Profile) {
     setEditMorador(m)
     const currentFracao = fracoes.find(f => f.proprietario_id === m.id)
-    setFormMorador({ nome: m.nome, email: m.email, telefone: m.telefone ?? '', role: m.role, fracao_id: currentFracao?.id ?? '' })
+    setFormMorador({ nome: m.nome, email: m.email, telefone: m.telefone ?? '', role: m.role, fracao_id: currentFracao?.id ?? '', senha: '' })
     setOpenMorador(true)
   }
 
@@ -64,8 +64,22 @@ export function MoradoresPage() {
 
     // Persist to Supabase if configured
     if (isSupabaseConfigured && profile?.condominio_id) {
+      // Create Supabase Auth user when creating new morador with password
+      let authUserId = moradorData.id
+      if (!editMorador && formMorador.senha) {
+        const isolated = createIsolatedClient()
+        const { data: signUpData, error: signUpError } = await isolated.auth.signUp({
+          email: formMorador.email,
+          password: formMorador.senha,
+        })
+        if (signUpError) {
+          alert(`Erro ao criar login: ${signUpError.message}`)
+          return
+        }
+        if (signUpData.user) authUserId = signUpData.user.id
+      }
       const { error } = await supabase.from('profiles').upsert({
-        id: moradorData.id,
+        id: authUserId,
         nome: moradorData.nome,
         email: moradorData.email,
         telefone: moradorData.telefone ?? null,
@@ -74,6 +88,7 @@ export function MoradoresPage() {
         created_at: moradorData.created_at,
       })
       if (error) console.error('Erro ao guardar morador:', error)
+      moradorData.id = authUserId
     }
 
     if (editMorador) {
@@ -341,6 +356,15 @@ export function MoradoresPage() {
           <Input label="Nome completo" value={formMorador.nome} onChange={e => setFormMorador({ ...formMorador, nome: e.target.value })} placeholder="João Silva" required />
           <Input label="Email" type="email" value={formMorador.email} onChange={e => setFormMorador({ ...formMorador, email: e.target.value })} placeholder="joao@email.com" required />
           <Input label="Telefone" value={formMorador.telefone} onChange={e => setFormMorador({ ...formMorador, telefone: e.target.value })} placeholder="9xx xxx xxx" />
+          {!editMorador && (
+            <Input
+              label="Senha de acesso"
+              type="password"
+              value={formMorador.senha}
+              onChange={e => setFormMorador({ ...formMorador, senha: e.target.value })}
+              placeholder="Mínimo 6 caracteres"
+            />
+          )}
           <Select label="Perfil" value={formMorador.role} onChange={e => setFormMorador({ ...formMorador, role: e.target.value })} options={[{ value: 'morador', label: 'Morador' }, { value: 'admin', label: 'Administrador' }, { value: 'funcionario', label: 'Funcionário' }]} />
           <Select
             label="Fração associada"
