@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext'
+import { useAppData } from '@/contexts/AppDataContext'
 import { Card, CardBody } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -7,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, CreditCard, AlertTriangle,
   TrendingUp, TrendingDown, Clock, ArrowRight,
-  Megaphone, Wrench, Building2,
+  Megaphone, Wrench, Building2, ShieldAlert, Bell,
 } from 'lucide-react'
 
 // ── Stats ────────────────────────────────────────────────────
@@ -77,8 +78,22 @@ const quickLinks = [
 
 export function DashboardPage() {
   const { profile } = useAuth()
+  const { documentos, ocorrencias } = useAppData()
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const isAdmin = profile?.role === 'admin'
+
+  // Documentos a expirar em 60 dias
+  const expiring = documentos
+    .filter(d => d.data_validade)
+    .map(d => ({ ...d, daysLeft: Math.ceil((new Date(d.data_validade!).getTime() - Date.now()) / 86400000) }))
+    .filter(d => d.daysLeft <= 60)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+
+  // Ocorrências urgentes abertas
+  const urgentes = ocorrencias.filter(o =>
+    (o.prioridade === 'urgente' || o.tipo === 'risco') && o.estado === 'aberta'
+  )
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -99,6 +114,64 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Alertas Críticos ── */}
+      {isAdmin && (expiring.length > 0 || urgentes.length > 0) && (
+        <div className="space-y-3">
+          {/* Documentos a expirar */}
+          {expiring.length > 0 && (
+            <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldAlert size={18} className="text-red-600" />
+                <h3 className="font-bold text-red-700 text-sm">Documentos a expirar — Ação imediata necessária</h3>
+              </div>
+              <div className="space-y-2">
+                {expiring.map(d => (
+                  <div key={d.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-red-100">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={14} className={d.daysLeft <= 0 ? 'text-red-600' : d.daysLeft <= 15 ? 'text-red-500' : 'text-orange-500'} />
+                      <span className="text-sm font-medium text-slate-800">{d.nome}</span>
+                      <span className="text-xs text-slate-400 capitalize">{d.categoria}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${d.daysLeft <= 0 ? 'bg-red-100 text-red-700' : d.daysLeft <= 15 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                        {d.daysLeft <= 0 ? 'EXPIRADO' : `${d.daysLeft} dias`}
+                      </span>
+                      <button onClick={() => navigate('/documentos')} className="text-xs text-red-600 hover:underline font-medium">
+                        Ver →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Ocorrências urgentes/risco */}
+          {urgentes.length > 0 && (
+            <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell size={18} className="text-orange-600" />
+                <h3 className="font-bold text-orange-700 text-sm">Ocorrências urgentes / situações de risco em aberto</h3>
+              </div>
+              <div className="space-y-2">
+                {urgentes.map(o => (
+                  <div key={o.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-orange-100">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={14} className="text-orange-500" />
+                      <span className="text-sm font-medium text-slate-800">{o.titulo}</span>
+                      {o.autor_nome && <span className="text-xs text-slate-400">por {o.autor_nome}</span>}
+                    </div>
+                    <button onClick={() => navigate('/ocorrencias')} className="text-xs text-orange-600 hover:underline font-medium">
+                      Ver →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
