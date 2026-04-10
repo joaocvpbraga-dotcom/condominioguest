@@ -69,9 +69,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       })
   }, [profile?.condominio_id])
 
-  // Always ensure the logged-in user appears in the moradores list
+  // Ensure moradores (non-admin) appear in their own list
   useEffect(() => {
-    if (!profile) return
+    if (!profile || profile.role === 'admin') return
     setMoradores(prev => {
       const exists = prev.some(m => m.id === profile.id)
       if (exists) return prev
