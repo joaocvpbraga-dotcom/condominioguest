@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { getInitials, formatDate } from '@/lib/utils'
-import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, UserCheck, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, UserCheck, RefreshCw, ShieldCheck, Save } from 'lucide-react'
 import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -59,6 +59,8 @@ export function MoradoresPage() {
   }
 
   const [changingRole, setChangingRole] = useState<string | null>(null)
+  // pendingRoles: stores unsaved role changes keyed by user id
+  const [pendingRoles, setPendingRoles] = useState<Record<string, Profile['role']>>({})
 
   async function handleRoleChange(u: Profile, newRole: Profile['role']) {
     setChangingRole(u.id)
@@ -68,6 +70,7 @@ export function MoradoresPage() {
     }
     setUtilizadores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
     setMoradores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
+    setPendingRoles(prev => { const next = { ...prev }; delete next[u.id]; return next })
     setChangingRole(null)
   }
 
@@ -456,16 +459,37 @@ export function MoradoresPage() {
                         <td className="px-6 py-3 text-slate-400">{formatDate(u.created_at)}</td>
                         <td className="px-6 py-3 text-right">
                           {u.id !== profile?.id && (
-                            <select
-                              value={u.role}
-                              disabled={changingRole === u.id}
-                              onChange={e => handleRoleChange(u, e.target.value as Profile['role'])}
-                              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:opacity-50 cursor-pointer"
-                            >
-                              <option value="morador">Morador</option>
-                              <option value="admin">Administrador</option>
-                              <option value="funcionario">Funcionário</option>
-                            </select>
+                            <div className="flex items-center gap-2 justify-end">
+                              <select
+                                value={pendingRoles[u.id] ?? u.role}
+                                disabled={changingRole === u.id}
+                                onChange={e => {
+                                  const newRole = e.target.value as Profile['role']
+                                  if (newRole === u.role) {
+                                    setPendingRoles(prev => { const next = { ...prev }; delete next[u.id]; return next })
+                                  } else {
+                                    setPendingRoles(prev => ({ ...prev, [u.id]: newRole }))
+                                  }
+                                }}
+                                className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:opacity-50 cursor-pointer"
+                              >
+                                <option value="morador">Morador</option>
+                                <option value="admin">Administrador</option>
+                                <option value="funcionario">Funcionário</option>
+                              </select>
+                              {pendingRoles[u.id] && (
+                                <button
+                                  onClick={() => handleRoleChange(u, pendingRoles[u.id])}
+                                  disabled={changingRole === u.id}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {changingRole === u.id
+                                    ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    : <Save size={12} />}
+                                  Guardar
+                                </button>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
