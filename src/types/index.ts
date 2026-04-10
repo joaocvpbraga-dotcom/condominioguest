@@ -107,10 +107,13 @@ export interface Documento {
   condominio_id: string
   nome: string
   descricao?: string
-  categoria: 'ata' | 'regulamento' | 'contrato' | 'outro'
+  categoria: 'ata' | 'regulamento' | 'contrato' | 'seguro' | 'comprovativo' | 'outro'
   url: string
   tamanho?: number
   autor_id: string
+  morador_id?: string
+  data_validade?: string
+  periodo?: 'mensal' | 'trimestral' | 'semestral' | 'anual'
   created_at: string
 }
 
