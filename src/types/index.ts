@@ -156,3 +156,23 @@ export interface Manutencao {
   created_at: string
   fornecedor?: Fornecedor
 }
+
+export interface RegistoCaixa {
+  id: string
+  condominio_id: string
+  ano: number
+  mes: number // 1-12
+  valor: number
+  notas?: string
+  created_at: string
+}
+
+export interface RecebimentoTrimestral {
+  id: string
+  condominio_id: string
+  ano: number
+  trimestre: 1 | 2 | 3 | 4
+  valor: number
+  notas?: string
+  created_at: string
+}

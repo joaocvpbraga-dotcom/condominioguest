@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao } from '@/types'
+import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao, RegistoCaixa, RecebimentoTrimestral } from '@/types'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -22,6 +22,10 @@ interface AppDataContextType {
   setFornecedores: React.Dispatch<React.SetStateAction<Fornecedor[]>>
   manutencoes: Manutencao[]
   setManutencoes: React.Dispatch<React.SetStateAction<Manutencao[]>>
+  registosCaixa: RegistoCaixa[]
+  setRegistosCaixa: React.Dispatch<React.SetStateAction<RegistoCaixa[]>>
+  recebimentos: RecebimentoTrimestral[]
+  setRecebimentos: React.Dispatch<React.SetStateAction<RecebimentoTrimestral[]>>
 }
 
 const AppDataContext = createContext<AppDataContextType | null>(null)
@@ -81,6 +85,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [rubricas, setRubricas] = useState<Orcamento[]>(() => loadLS('cg_rubricas', []))
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => loadLS('cg_fornecedores', []))
   const [manutencoes, setManutencoes] = useState<Manutencao[]>(() => loadLS('cg_manutencoes', []))
+  const [registosCaixa, setRegistosCaixa] = useState<RegistoCaixa[]>(() => loadLS('cg_registos_caixa', []))
+  const [recebimentos, setRecebimentos] = useState<RecebimentoTrimestral[]>(() => loadLS('cg_recebimentos', []))
 
   useEffect(() => { localStorage.setItem('cg_moradores', JSON.stringify(moradores)) }, [moradores])
   useEffect(() => { localStorage.setItem('cg_fracoes', JSON.stringify(fracoes)) }, [fracoes])
@@ -91,6 +97,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('cg_rubricas', JSON.stringify(rubricas)) }, [rubricas])
   useEffect(() => { localStorage.setItem('cg_fornecedores', JSON.stringify(fornecedores)) }, [fornecedores])
   useEffect(() => { localStorage.setItem('cg_manutencoes', JSON.stringify(manutencoes)) }, [manutencoes])
+  useEffect(() => { localStorage.setItem('cg_registos_caixa', JSON.stringify(registosCaixa)) }, [registosCaixa])
+  useEffect(() => { localStorage.setItem('cg_recebimentos', JSON.stringify(recebimentos)) }, [recebimentos])
 
   return (
     <AppDataContext.Provider value={{
@@ -103,6 +111,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       rubricas, setRubricas,
       fornecedores, setFornecedores,
       manutencoes, setManutencoes,
+      registosCaixa, setRegistosCaixa,
+      recebimentos, setRecebimentos,
     }}>
       {children}
     </AppDataContext.Provider>
