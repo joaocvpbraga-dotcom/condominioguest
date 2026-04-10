@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppDataProvider } from '@/contexts/AppDataContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AdminRoute } from '@/components/auth/AdminRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
@@ -30,14 +31,14 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<DashboardPage />} />
-            <Route path="moradores" element={<MoradoresPage />} />
-            <Route path="quotas" element={<QuotasPage />} />
+            <Route index element={<AdminRoute><DashboardPage /></AdminRoute>} />
+            <Route path="moradores" element={<AdminRoute><MoradoresPage /></AdminRoute>} />
+            <Route path="quotas" element={<AdminRoute><QuotasPage /></AdminRoute>} />
             <Route path="ocorrencias" element={<OcorrenciasPage />} />
-            <Route path="comunicados" element={<ComunicadosPage />} />
+            <Route path="comunicados" element={<AdminRoute><ComunicadosPage /></AdminRoute>} />
             <Route path="documentos" element={<DocumentosPage />} />
-            <Route path="contabilidade" element={<ContabilidadePage />} />
-            <Route path="manutencoes" element={<ManutencoesPage />} />
+            <Route path="contabilidade" element={<AdminRoute><ContabilidadePage /></AdminRoute>} />
+            <Route path="manutencoes" element={<AdminRoute><ManutencoesPage /></AdminRoute>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

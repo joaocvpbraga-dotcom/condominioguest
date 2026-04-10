@@ -8,7 +8,7 @@ import {
   Wrench, LogOut, Building2, Menu, X,
 } from 'lucide-react'
 
-const navItems = [
+const adminNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/moradores', icon: Users, label: 'Moradores' },
   { to: '/quotas', icon: CreditCard, label: 'Quotas' },
@@ -19,9 +19,17 @@ const navItems = [
   { to: '/manutencoes', icon: Wrench, label: 'Manutenções' },
 ]
 
+const moradorNavItems = [
+  { to: '/ocorrencias', icon: AlertTriangle, label: 'Ocorrências', end: false },
+  { to: '/documentos', icon: FileText, label: 'Documentos', end: false },
+]
+
 export function Sidebar() {
   const { profile, signOut } = useAuth()
   const [open, setOpen] = useState(false)
+
+  const isAdmin = profile?.role === 'admin'
+  const navItems = isAdmin ? adminNavItems : moradorNavItems
 
   const nav = (
     <>

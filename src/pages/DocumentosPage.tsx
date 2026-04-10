@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils'
 import { FileText, Plus, Download, File } from 'lucide-react'
 import type { Documento } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 const catVariant: Record<string, 'info' | 'success' | 'warning' | 'default'> = {
   ata: 'info', regulamento: 'success', contrato: 'warning', outro: 'default',
@@ -27,6 +28,8 @@ const categories = ['ata', 'regulamento', 'contrato', 'outro']
 
 export function DocumentosPage() {
   const { documentos, setDocumentos } = useAppData()
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({ nome: '', descricao: '', categoria: 'ata' })
@@ -40,9 +43,11 @@ export function DocumentosPage() {
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
           <p className="text-slate-500 mt-1">Atas, regulamentos e arquivos</p>
         </div>
-        <Button onClick={() => setOpenModal(true)}>
-          <Plus size={16} /> Novo Documento
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setOpenModal(true)}>
+            <Plus size={16} /> Novo Documento
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
@@ -53,7 +58,7 @@ export function DocumentosPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={<FileText size={48} />} title="Sem documentos" description="Carregue o primeiro documento." action={<Button onClick={() => setOpenModal(true)}><Plus size={16} /> Carregar</Button>} />
+        <EmptyState icon={<FileText size={48} />} title="Sem documentos" description="Carregue o primeiro documento." action={isAdmin ? <Button onClick={() => setOpenModal(true)}><Plus size={16} /> Carregar</Button> : undefined} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map(d => (
