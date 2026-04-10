@@ -59,8 +59,26 @@ export function MoradoresPage() {
   }
 
   const [changingRole, setChangingRole] = useState<string | null>(null)
+  const [deletingUser, setDeletingUser] = useState<string | null>(null)
   // pendingRoles: stores unsaved role changes keyed by user id
   const [pendingRoles, setPendingRoles] = useState<Record<string, Profile['role']>>({})
+
+  async function handleDeleteUtilizador(u: Profile) {
+    if (!window.confirm(`Eliminar "${u.nome}" (${u.email})? Esta ação não pode ser desfeita.`)) return
+    setDeletingUser(u.id)
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('profiles').delete().eq('id', u.id)
+      if (error && error.code !== 'PGRST116') {
+        alert(`Erro ao eliminar: ${error.message}`)
+        setDeletingUser(null)
+        return
+      }
+    }
+    setUtilizadores(prev => prev.filter(x => x.id !== u.id))
+    setMoradores(prev => prev.filter(x => x.id !== u.id))
+    setFracoes(prev => prev.map(f => f.proprietario_id === u.id ? { ...f, proprietario_id: undefined, proprietario: undefined } : f))
+    setDeletingUser(null)
+  }
 
   async function handleRoleChange(u: Profile, newRole: Profile['role']) {
     setChangingRole(u.id)
@@ -489,6 +507,16 @@ export function MoradoresPage() {
                                   Guardar
                                 </button>
                               )}
+                              <button
+                                onClick={() => handleDeleteUtilizador(u)}
+                                disabled={deletingUser === u.id}
+                                title="Eliminar utilizador"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                              >
+                                {deletingUser === u.id
+                                  ? <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin block" />
+                                  : <Trash2 size={14} />}
+                              </button>
                             </div>
                           )}
                         </td>
