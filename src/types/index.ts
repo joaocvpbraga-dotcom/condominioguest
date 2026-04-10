@@ -49,10 +49,11 @@ export interface Ocorrencia {
   condominio_id: string
   titulo: string
   descricao: string
-  tipo: 'reclamacao' | 'avaria' | 'sugestao' | 'outro'
+  tipo: 'reclamacao' | 'avaria' | 'sugestao' | 'risco' | 'intervencao' | 'outro'
   estado: 'aberta' | 'em_analise' | 'resolvida' | 'fechada'
   prioridade: 'baixa' | 'media' | 'alta' | 'urgente'
   autor_id: string
+  autor_nome?: string
   created_at: string
   autor?: Profile
 }
@@ -98,6 +99,7 @@ export interface Comunicado {
   conteudo: string
   autor_id: string
   importante: boolean
+  destinatario_id?: string
   created_at: string
   autor?: Profile
 }

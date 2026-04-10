@@ -6,8 +6,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDate } from '@/lib/utils'
-import { FileText, Plus, Download, File, AlertTriangle, Bell } from 'lucide-react'
-import type { Documento } from '@/types'
+import { FileText, Plus, Download, File, AlertTriangle, Bell, Send } from 'lucide-react'
+import type { Documento, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -37,16 +37,40 @@ function daysUntil(dateStr: string) {
 const adminCategories = ['ata', 'regulamento', 'contrato', 'seguro', 'comprovativo', 'outro']
 
 export function DocumentosPage() {
-  const { documentos, setDocumentos } = useAppData()
+  const { documentos, setDocumentos, moradores, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
+  const [openAlertModal, setOpenAlertModal] = useState(false)
+  const [alertDoc, setAlertDoc] = useState<Documento | null>(null)
+  const [alertDest, setAlertDest] = useState('')
   const [form, setForm] = useState({
     nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo',
     data_validade: '', periodo: 'mensal' as Documento['periodo'],
   })
+
+  function enviarAlerta() {
+    if (!alertDoc) return
+    const destinatario = alertDest || undefined
+    const days = daysUntil(alertDoc.data_validade!)
+    const comunicado: Comunicado = {
+      id: `c-${Date.now()}`,
+      condominio_id: 'c1',
+      titulo: `⚠️ Documento a expirar: ${alertDoc.nome}`,
+      conteudo: `O documento "${alertDoc.nome}" ${days <= 0 ? 'expirou' : `expira em ${days} dias`} (${formatDate(alertDoc.data_validade!)}). Por favor tome as medidas necessárias.`,
+      importante: true,
+      destinatario_id: destinatario,
+      autor_id: profile?.id ?? 'admin',
+      created_at: new Date().toISOString(),
+    }
+    setComunicados(prev => [comunicado, ...prev])
+    setOpenAlertModal(false)
+    setAlertDoc(null)
+    setAlertDest('')
+    alert('Alerta enviado com sucesso!')
+  }
 
   // Documentos a expirar (admin alert): data_validade dentro de 60 dias
   const expiring = useMemo(() =>
@@ -113,9 +137,17 @@ export function DocumentosPage() {
                   <span className="font-medium">{d.nome}</span>
                   <Badge variant={catVariant[d.categoria]}>{catLabel[d.categoria]}</Badge>
                 </div>
-                <span className={`font-semibold text-xs ${days <= 15 ? 'text-red-600' : 'text-orange-600'}`}>
-                  {days <= 0 ? 'Expirado!' : `${days} dias`}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className={`font-semibold text-xs ${days <= 15 ? 'text-red-600' : 'text-orange-600'}`}>
+                    {days <= 0 ? 'Expirado!' : `${days} dias`}
+                  </span>
+                  <button
+                    onClick={() => { setAlertDoc(d); setAlertDest(''); setOpenAlertModal(true) }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    <Send size={11} /> Enviar Alerta
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -170,7 +202,7 @@ export function DocumentosPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal de upload */}
       <Modal open={openModal} onClose={() => setOpenModal(false)} title={isAdmin ? 'Novo Documento' : 'Enviar Comprovativo de Pagamento'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Input label="Nome" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder={isAdmin ? 'Nome do documento' : 'Ex: Quota Janeiro 2026'} required />
@@ -219,6 +251,30 @@ export function DocumentosPage() {
             <Button type="submit">{isAdmin ? 'Carregar' : 'Enviar'}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal de alerta */}
+      <Modal open={openAlertModal} onClose={() => setOpenAlertModal(false)} title="Enviar Alerta de Documento">
+        <div className="space-y-4">
+          {alertDoc && (
+            <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+              <strong>{alertDoc.nome}</strong> — {daysUntil(alertDoc.data_validade!) <= 0 ? 'Expirado' : `expira em ${daysUntil(alertDoc.data_validade!)} dias`} ({formatDate(alertDoc.data_validade!)})
+            </div>
+          )}
+          <Select
+            label="Enviar para"
+            value={alertDest}
+            onChange={e => setAlertDest(e.target.value)}
+            options={[
+              { value: '', label: 'Todos os moradores' },
+              ...moradores.map(m => ({ value: m.id, label: m.nome })),
+            ]}
+          />
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" type="button" onClick={() => setOpenAlertModal(false)}>Cancelar</Button>
+            <Button onClick={enviarAlerta}><Send size={14} /> Enviar Alerta</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

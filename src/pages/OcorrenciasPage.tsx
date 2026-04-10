@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDateTime } from '@/lib/utils'
-import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send } from 'lucide-react'
+import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send, ShieldAlert, Wrench } from 'lucide-react'
 import type { Ocorrencia, Nota, OcorrenciaComNotas } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ── Configs ───────────────────────────────────────────────────
 const PIPELINE: Array<{ estado: string; label: string; color: string; icon: React.ReactNode }> = [
@@ -18,10 +19,12 @@ const PIPELINE: Array<{ estado: string; label: string; color: string; icon: Reac
 ]
 
 const tipoVariant: Record<string, 'danger' | 'warning' | 'info' | 'default'> = {
-  avaria: 'danger', reclamacao: 'warning', sugestao: 'info', outro: 'default',
+  avaria: 'danger', reclamacao: 'warning', sugestao: 'info',
+  risco: 'danger', intervencao: 'info', outro: 'default',
 }
 const tipoLabel: Record<string, string> = {
-  avaria: 'Avaria', reclamacao: 'Reclamação', sugestao: 'Sugestão', outro: 'Outro',
+  avaria: 'Avaria', reclamacao: 'Reclamação', sugestao: 'Sugestão',
+  risco: 'Situação de Risco', intervencao: 'Intervenção no Apartamento', outro: 'Outro',
 }
 const prioridadeStyle: Record<string, string> = {
   urgente: 'bg-red-100 text-red-700 border border-red-200',
@@ -35,6 +38,9 @@ const estadoVariant: Record<string, 'warning' | 'info' | 'success' | 'default'> 
 
 export function OcorrenciasPage() {
   const { ocorrencias, setOcorrencias } = useAppData()
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+
   const [filter, setFilter] = useState('todas')
   const [selected, setSelected] = useState<OcorrenciaComNotas | null>(null)
   const [novaNota, setNovaNota] = useState('')
@@ -42,9 +48,14 @@ export function OcorrenciasPage() {
   const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
 
-  const filtered = filter === 'todas'
+  // Moradores só veem as suas; admin vê todas
+  const visibleOcorrencias = isAdmin
     ? ocorrencias
-    : ocorrencias.filter(o => o.estado === filter)
+    : ocorrencias.filter(o => o.autor_id === profile?.id)
+
+  const filtered = filter === 'todas'
+    ? visibleOcorrencias
+    : visibleOcorrencias.filter(o => o.estado === filter)
 
   // Sync selected when state changes
   function updateOcorrencia(updated: OcorrenciaComNotas) {
@@ -88,7 +99,8 @@ export function OcorrenciasPage() {
       tipo: form.tipo as Ocorrencia['tipo'],
       estado: 'aberta',
       prioridade: form.prioridade as Ocorrencia['prioridade'],
-      autor_id: 'demo',
+      autor_id: profile?.id ?? 'demo',
+      autor_nome: profile?.nome ?? 'Morador',
       created_at: new Date().toISOString(),
       notas: [],
     }
@@ -116,7 +128,7 @@ export function OcorrenciasPage() {
         {/* Contadores pipeline */}
         <div className="px-8 mb-4 grid grid-cols-4 gap-2">
           {PIPELINE.map(p => {
-            const count = ocorrencias.filter(o => o.estado === p.estado).length
+            const count = visibleOcorrencias.filter(o => o.estado === p.estado).length
             return (
               <button
                 key={p.estado}
@@ -161,6 +173,7 @@ export function OcorrenciasPage() {
                   <p className="text-xs text-slate-500 truncate">{o.descricao}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
                     <span>{formatDateTime(o.created_at)}</span>
+                    {isAdmin && o.autor_nome && <span className="text-blue-500 font-medium">{o.autor_nome}</span>}
                     {o.notas.length > 0 && (
                       <span className="flex items-center gap-1">
                         <MessageSquare size={11} /> {o.notas.length} {o.notas.length === 1 ? 'nota' : 'notas'}
@@ -341,6 +354,8 @@ export function OcorrenciasPage() {
               onChange={e => setForm({ ...form, tipo: e.target.value })}
               options={[
                 { value: 'avaria', label: 'Avaria' },
+                { value: 'risco', label: 'Situação de Risco' },
+                { value: 'intervencao', label: 'Intervenção no Apartamento' },
                 { value: 'reclamacao', label: 'Reclamação' },
                 { value: 'sugestao', label: 'Sugestão' },
                 { value: 'outro', label: 'Outro' },
