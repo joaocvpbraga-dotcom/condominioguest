@@ -478,14 +478,14 @@ export function MoradoresPage() {
       {/* ── Tab Utilizadores ── */}
       {tab === 'utilizadores' && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <p className="text-sm text-slate-500">{utilizadores.length} utilizador(es) registado(s)</p>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => setOpenNovoUser(true)}>
-                <Plus size={14} /> Novo Utilizador
-              </Button>
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={fetchUtilizadores} disabled={loadingUsers}>
                 <RefreshCw size={14} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar
+              </Button>
+              <Button size="sm" onClick={() => setOpenNovoUser(true)}>
+                <Plus size={14} /> Novo Utilizador
               </Button>
             </div>
           </div>
