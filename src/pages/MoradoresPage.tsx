@@ -10,8 +10,8 @@ import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, User
 import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured, callAdminFunction } from '@/lib/supabase'
-import { criarUtilizador } from '@/lib/adminFunctions'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { criarUtilizador, eliminarUtilizador, atualizarRole } from '@/lib/adminFunctions'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', funcionario: 'Inquilino' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
@@ -97,9 +97,12 @@ export function MoradoresPage() {
     if (!window.confirm(`Eliminar "${u.nome}" (${u.email})? Esta ação não pode ser desfeita.`)) return
     setDeletingUser(u.id)
     if (isSupabaseConfigured) {
-      const { error } = await callAdminFunction('delete-user', { userId: u.id })
-      if (error) {
-        alert(`Erro ao eliminar: ${error}`)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { alert('Sessão inválida'); setDeletingUser(null); return }
+        await eliminarUtilizador(u.id, session.access_token)
+      } catch (e: unknown) {
+        alert(`Erro ao eliminar: ${e instanceof Error ? e.message : e}`)
         setDeletingUser(null)
         return
       }
@@ -113,8 +116,15 @@ export function MoradoresPage() {
   async function handleRoleChange(u: Profile, newRole: Profile['role']) {
     setChangingRole(u.id)
     if (isSupabaseConfigured) {
-      const { error } = await callAdminFunction('update-role', { userId: u.id, role: newRole })
-      if (error) { alert(`Erro ao alterar perfil: ${error}`); setChangingRole(null); return }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { alert('Sessão inválida'); setChangingRole(null); return }
+        await atualizarRole(u.id, newRole, session.access_token)
+      } catch (e: unknown) {
+        alert(`Erro ao alterar perfil: ${e instanceof Error ? e.message : e}`)
+        setChangingRole(null)
+        return
+      }
     }
     setUtilizadores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
     setMoradores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
@@ -210,9 +220,12 @@ export function MoradoresPage() {
   async function handleDeleteMorador(m: Profile) {
     if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
     if (isSupabaseConfigured) {
-      const { error } = await callAdminFunction('delete-user', { userId: m.id })
-      if (error) {
-        alert(`Erro ao eliminar: ${error}`)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { alert('Sessão inválida'); return }
+        await eliminarUtilizador(m.id, session.access_token)
+      } catch (e: unknown) {
+        alert(`Erro ao eliminar: ${e instanceof Error ? e.message : e}`)
         return
       }
     }
