@@ -74,7 +74,19 @@ export function MoradoresPage() {
     if (isSupabaseConfigured) {
       try {
         const data = await criarUtilizador({ email: novoUserForm.email, password: novoUserForm.senha, nome: novoUserForm.nome })
-        const newProfile: Profile = { id: data.id ?? crypto.randomUUID(), nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+        const userId = data.id ?? crypto.randomUUID()
+        // Guardar perfil completo (com condominio_id e role) no Supabase
+        if (profile?.condominio_id) {
+          await supabase.from('profiles').upsert({
+            id: userId,
+            nome: novoUserForm.nome,
+            email: novoUserForm.email,
+            role: novoUserForm.role,
+            condominio_id: profile.condominio_id,
+            created_at: new Date().toISOString(),
+          })
+        }
+        const newProfile: Profile = { id: userId, nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
         setUtilizadores(prev => [newProfile, ...prev])
         setMoradores(prev => [newProfile, ...prev])
       } catch (e: unknown) {

@@ -87,17 +87,18 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [comunicados, setComunicados] = useState<Comunicado[]>([])
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !profile?.condominio_id) return
-    supabase
-      .from('comunicados')
-      .select('*')
-      .eq('condominio_id', profile.condominio_id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) { console.error('comunicados fetch error:', error); return }
-        if (data) setComunicados(data as Comunicado[])
-      })
-  }, [profile?.condominio_id])
+    if (!isSupabaseConfigured || !profile?.id) return
+
+    const condominioId = profile.condominio_id
+    const query = condominioId
+      ? supabase.from('comunicados').select('*').eq('condominio_id', condominioId).order('created_at', { ascending: false })
+      : supabase.from('comunicados').select('*').or(`destinatario_id.eq.${profile.id},destinatario_id.is.null`).order('created_at', { ascending: false })
+
+    query.then(({ data, error }) => {
+      if (error) { console.error('comunicados fetch error:', error); return }
+      if (data) setComunicados(data as Comunicado[])
+    })
+  }, [profile?.id, profile?.condominio_id])
   const [documentos, setDocumentos] = useState<Documento[]>(() => loadLS('cg_documentos', []))
   const [rubricas, setRubricas] = useState<Orcamento[]>(() => loadLS('cg_rubricas', []))
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => loadLS('cg_fornecedores', []))
