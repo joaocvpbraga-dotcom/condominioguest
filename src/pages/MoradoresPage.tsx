@@ -210,9 +210,9 @@ export function MoradoresPage() {
   async function handleDeleteMorador(m: Profile) {
     if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('profiles').delete().eq('id', m.id)
-      if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao eliminar morador:', error)
+      const { error } = await callAdminFunction('delete-user', { userId: m.id })
+      if (error) {
+        alert(`Erro ao eliminar: ${error}`)
         return
       }
     }
