@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured, callAdminFunction } from '@/lib/supabase'
 import { criarUtilizador } from '@/lib/adminFunctions'
 
-const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
+const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', funcionario: 'Inquilino' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
 
 const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '', senha: '' }
@@ -523,9 +523,9 @@ export function MoradoresPage() {
                                 }}
                                 className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:opacity-50 cursor-pointer"
                               >
-                                <option value="morador">Morador</option>
+                                <option value="morador">Proprietário</option>
                                 <option value="admin">Administrador</option>
-                                <option value="funcionario">Funcionário</option>
+                                <option value="funcionario">Inquilino</option>
                               </select>
                               {pendingRoles[u.id] && (
                                 <button
@@ -638,9 +638,9 @@ export function MoradoresPage() {
             value={novoUserForm.role}
             onChange={e => setNovoUserForm({ ...novoUserForm, role: e.target.value as Profile['role'] })}
             options={[
-              { value: 'morador', label: 'Morador' },
+              { value: 'morador', label: 'Proprietário' },
               { value: 'admin', label: 'Administrador' },
-              { value: 'funcionario', label: 'Funcionário' },
+              { value: 'funcionario', label: 'Inquilino' },
             ]}
           />
           <div className="flex gap-2 justify-end pt-1">
@@ -671,7 +671,7 @@ export function MoradoresPage() {
               placeholder="Mínimo 6 caracteres"
             />
           )}
-          <Select label="Perfil" value={formMorador.role} onChange={e => setFormMorador({ ...formMorador, role: e.target.value })} options={[{ value: 'morador', label: 'Morador' }, { value: 'admin', label: 'Administrador' }, { value: 'funcionario', label: 'Funcionário' }]} />
+          <Select label="Perfil" value={formMorador.role} onChange={e => setFormMorador({ ...formMorador, role: e.target.value })} options={[{ value: 'morador', label: 'Proprietário' }, { value: 'admin', label: 'Administrador' }, { value: 'funcionario', label: 'Inquilino' }]} />
           <Select
             label="Fração associada"
             value={formMorador.fracao_id}
