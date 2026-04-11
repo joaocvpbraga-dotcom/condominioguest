@@ -26,8 +26,10 @@ export async function eliminarUtilizador(userId: string, accessToken: string) {
     body: JSON.stringify({ action: 'delete', userId }),
   })
 
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Erro ao eliminar utilizador')
+  const text = await res.text()
+  let data: Record<string, unknown> = {}
+  try { data = JSON.parse(text) } catch { /* ignore */ }
+  if (!res.ok) throw new Error(data.error as string || `HTTP ${res.status}: ${text}`)
   return data
 }
 
