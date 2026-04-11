@@ -36,11 +36,13 @@ function daysUntil(dateStr: string) {
 }
 
 const adminCategories = ['ata', 'regulamento', 'contrato', 'seguro', 'comprovativo', 'outro']
+const moradorCategories = ['seguro', 'comprovativo', 'outro']
 
 export function DocumentosPage() {
   const { documentos, setDocumentos, moradores, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const isMorador = profile?.role === 'morador' || profile?.role === 'funcionario'
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
@@ -52,7 +54,6 @@ export function DocumentosPage() {
     nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo',
     data_validade: '', periodo: 'mensal' as Documento['periodo'],
   })
-
   function openEdit(d: Documento) {
     setEditDoc(d)
     setForm({ nome: d.nome, descricao: d.descricao ?? '', categoria: d.categoria, data_validade: d.data_validade ?? '', periodo: d.periodo ?? 'mensal' })
@@ -106,7 +107,7 @@ export function DocumentosPage() {
     [documentos]
   )
 
-  const visibleCategories = isAdmin ? adminCategories : ['ata', 'regulamento', 'contrato', 'seguro', 'comprovativo', 'outro']
+  const visibleCategories = isAdmin ? adminCategories : moradorCategories
 
   const filtered = useMemo(() => {
     let list = documentos
@@ -158,7 +159,7 @@ export function DocumentosPage() {
           <p className="text-slate-500 mt-1">Atas, regulamentos, seguros e comprovativos</p>
         </div>
         <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal' }); setOpenModal(true) }}>
-          <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Enviar Comprovativo'}
+          <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Novo Documento'}
         </Button>
       </div>
 
@@ -255,36 +256,32 @@ export function DocumentosPage() {
       )}
 
       {/* Modal de upload */}
-      <Modal open={openModal} onClose={() => { setOpenModal(false); setEditDoc(null) }} title={editDoc ? 'Editar Documento' : isAdmin ? 'Novo Documento' : 'Enviar Comprovativo de Pagamento'}>
+      <Modal open={openModal} onClose={() => { setOpenModal(false); setEditDoc(null) }} title={editDoc ? 'Editar Documento' : 'Novo Documento'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <Input label="Nome" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder={isAdmin ? 'Nome do documento' : 'Ex: Quota Janeiro 2026'} required />
+          <Input label="Nome" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Nome do documento" required />
 
-          {isAdmin ? (
+          <Select
+            label="Categoria"
+            value={form.categoria}
+            onChange={e => setForm({ ...form, categoria: e.target.value })}
+            options={(isAdmin ? adminCategories : moradorCategories).map(c => ({ value: c, label: catLabel[c] }))}
+          />
+
+          {form.categoria === 'comprovativo' && (
             <Select
-              label="Categoria"
-              value={form.categoria}
-              onChange={e => setForm({ ...form, categoria: e.target.value })}
-              options={adminCategories.map(c => ({ value: c, label: catLabel[c] }))}
+              label="Periodicidade"
+              value={form.periodo}
+              onChange={e => setForm({ ...form, periodo: e.target.value as Documento['periodo'] })}
+              options={[
+                { value: 'mensal', label: 'Mensal' },
+                { value: 'trimestral', label: 'Trimestral' },
+                { value: 'semestral', label: 'Semestral' },
+                { value: 'anual', label: 'Anual' },
+              ]}
             />
-          ) : (
-            <>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Tipo de pagamento</label>
-                <Select
-                  value={form.periodo}
-                  onChange={e => setForm({ ...form, periodo: e.target.value as Documento['periodo'] })}
-                  options={[
-                    { value: 'mensal', label: 'Mensal' },
-                    { value: 'trimestral', label: 'Trimestral' },
-                    { value: 'semestral', label: 'Semestral' },
-                    { value: 'anual', label: 'Anual' },
-                  ]}
-                />
-              </div>
-            </>
           )}
 
-          {isAdmin && form.categoria === 'seguro' && (
+          {(form.categoria === 'seguro' || form.categoria === 'contrato') && (
             <Input
               label="Data de validade"
               type="date"
@@ -300,7 +297,7 @@ export function DocumentosPage() {
           </div>
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => setOpenModal(false)}>Cancelar</Button>
-            <Button type="submit">{isAdmin ? 'Carregar' : 'Enviar'}</Button>
+            <Button type="submit">Guardar</Button>
           </div>
         </form>
       </Modal>
