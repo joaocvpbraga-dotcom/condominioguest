@@ -10,6 +10,7 @@ import { FileText, Plus, Download, File, AlertTriangle, Bell, Send } from 'lucid
 import type { Documento, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 const catVariant: Record<string, 'info' | 'success' | 'warning' | 'default' | 'danger'> = {
   ata: 'info', regulamento: 'success', contrato: 'warning',
@@ -57,13 +58,27 @@ export function DocumentosPage() {
     const days = daysUntil(alertDoc.data_validade!)
     const comunicado: Comunicado = {
       id: `c-${Date.now()}`,
-      condominio_id: 'c1',
+      condominio_id: profile?.condominio_id ?? 'c1',
       titulo: `⚠️ Documento a expirar: ${alertDoc.nome}`,
       conteudo: `O documento "${alertDoc.nome}" ${days <= 0 ? 'expirou' : `expira em ${days} dias`} (${formatDate(alertDoc.data_validade!)}). Por favor tome as medidas necessárias.`,
       importante: true,
       destinatario_id: destinatario,
       autor_id: profile?.id ?? 'admin',
       created_at: new Date().toISOString(),
+    }
+    if (isSupabaseConfigured) {
+      supabase.from('comunicados').insert({
+        id: comunicado.id,
+        condominio_id: comunicado.condominio_id,
+        titulo: comunicado.titulo,
+        conteudo: comunicado.conteudo,
+        importante: comunicado.importante,
+        destinatario_id: comunicado.destinatario_id ?? null,
+        autor_id: comunicado.autor_id,
+        created_at: comunicado.created_at,
+      }).then(({ error }) => {
+        if (error) console.error('Erro ao guardar alerta:', error)
+      })
     }
     setComunicados(prev => [comunicado, ...prev])
     setOpenAlertModal(false)

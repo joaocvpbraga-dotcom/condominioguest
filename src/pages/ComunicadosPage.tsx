@@ -9,6 +9,7 @@ import { Megaphone, Plus, Pin, User } from 'lucide-react'
 import type { Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 export function ComunicadosPage() {
   const { comunicados, setComunicados, moradores } = useAppData()
@@ -70,18 +71,31 @@ export function ComunicadosPage() {
       )}
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} title="Novo Comunicado" size="lg">
-        <form className="space-y-4" onSubmit={e => {
+        <form className="space-y-4" onSubmit={async e => {
             e.preventDefault()
             if (!form.titulo || !form.conteudo) return
             const novo: Comunicado = {
               id: `c-${Date.now()}`,
-              condominio_id: 'c1',
+              condominio_id: profile?.condominio_id ?? 'c1',
               titulo: form.titulo,
               conteudo: form.conteudo,
               importante: form.importante,
               destinatario_id: form.destinatario_id || undefined,
               autor_id: profile?.id ?? 'demo',
               created_at: new Date().toISOString(),
+            }
+            if (isSupabaseConfigured) {
+              const { error } = await supabase.from('comunicados').insert({
+                id: novo.id,
+                condominio_id: novo.condominio_id,
+                titulo: novo.titulo,
+                conteudo: novo.conteudo,
+                importante: novo.importante,
+                destinatario_id: novo.destinatario_id ?? null,
+                autor_id: novo.autor_id,
+                created_at: novo.created_at,
+              })
+              if (error) { console.error('Erro ao guardar comunicado:', error); return }
             }
             setComunicados(prev => [novo, ...prev])
             setOpenModal(false)

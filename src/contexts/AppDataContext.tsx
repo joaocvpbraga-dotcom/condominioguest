@@ -84,7 +84,20 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, [profile])
   const [quotas, setQuotas] = useState<Quota[]>(() => loadLS('cg_quotas', []))
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaComNotas[]>(() => loadLS('cg_ocorrencias', []))
-  const [comunicados, setComunicados] = useState<Comunicado[]>(() => loadLS('cg_comunicados', []))
+  const [comunicados, setComunicados] = useState<Comunicado[]>([])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+    supabase
+      .from('comunicados')
+      .select('*')
+      .eq('condominio_id', profile.condominio_id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error('comunicados fetch error:', error); return }
+        if (data) setComunicados(data as Comunicado[])
+      })
+  }, [profile?.condominio_id])
   const [documentos, setDocumentos] = useState<Documento[]>(() => loadLS('cg_documentos', []))
   const [rubricas, setRubricas] = useState<Orcamento[]>(() => loadLS('cg_rubricas', []))
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => loadLS('cg_fornecedores', []))
@@ -98,7 +111,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('cg_fracoes', JSON.stringify(fracoes)) }, [fracoes])
   useEffect(() => { localStorage.setItem('cg_quotas', JSON.stringify(quotas)) }, [quotas])
   useEffect(() => { localStorage.setItem('cg_ocorrencias', JSON.stringify(ocorrencias)) }, [ocorrencias])
-  useEffect(() => { localStorage.setItem('cg_comunicados', JSON.stringify(comunicados)) }, [comunicados])
   useEffect(() => { localStorage.setItem('cg_documentos', JSON.stringify(documentos)) }, [documentos])
   useEffect(() => { localStorage.setItem('cg_rubricas', JSON.stringify(rubricas)) }, [rubricas])
   useEffect(() => { localStorage.setItem('cg_fornecedores', JSON.stringify(fornecedores)) }, [fornecedores])
