@@ -168,30 +168,12 @@ export function MoradoresPage() {
       // Create Supabase Auth user when creating new morador with password
       let authUserId = moradorData.id
       if (!editMorador && formMorador.senha) {
-        if (adminSupabase) {
-          // Admin client: creates user immediately, no email confirmation needed
-          const { data: created, error: createError } = await adminSupabase.auth.admin.createUser({
-            email: formMorador.email,
-            password: formMorador.senha,
-            email_confirm: true,
-          })
-          if (createError) {
-            alert(`Erro ao criar login: ${createError.message}`)
-            return
-          }
-          if (created.user) authUserId = created.user.id
-        } else {
-          // Fallback: anon signUp (requires email confirmation)
-          const isolated = createIsolatedClient()
-          const { data: signUpData, error: signUpError } = await isolated.auth.signUp({
-            email: formMorador.email,
-            password: formMorador.senha,
-          })
-          if (signUpError) {
-            alert(`Erro ao criar login: ${signUpError.message}`)
-            return
-          }
-          if (signUpData.user) authUserId = signUpData.user.id
+        try {
+          const created = await criarUtilizador({ email: formMorador.email, password: formMorador.senha, nome: formMorador.nome })
+          if (created?.id) authUserId = created.id
+        } catch (e: unknown) {
+          alert(`Erro ao criar login: ${e instanceof Error ? e.message : e}`)
+          return
         }
       }
       const { error } = await supabase.from('profiles').upsert({
