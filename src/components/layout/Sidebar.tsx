@@ -21,6 +21,7 @@ const adminNavItems = [
 
 const moradorNavItems = [
   { to: '/ocorrencias', icon: AlertTriangle, label: 'Ocorrências', end: false },
+  { to: '/comunicados', icon: Megaphone, label: 'Comunicados', end: false },
   { to: '/documentos', icon: FileText, label: 'Documentos', end: false },
   { to: '/contabilidade', icon: PiggyBank, label: 'Despesas', end: false },
   { to: '/manutencoes', icon: Wrench, label: 'Manutenções', end: false },

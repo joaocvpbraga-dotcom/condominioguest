@@ -35,7 +35,7 @@ function App() {
             <Route path="moradores" element={<AdminRoute><MoradoresPage /></AdminRoute>} />
             <Route path="quotas" element={<AdminRoute><QuotasPage /></AdminRoute>} />
             <Route path="ocorrencias" element={<OcorrenciasPage />} />
-            <Route path="comunicados" element={<AdminRoute><ComunicadosPage /></AdminRoute>} />
+            <Route path="comunicados" element={<ComunicadosPage />} />
             <Route path="documentos" element={<DocumentosPage />} />
             <Route path="contabilidade" element={<ContabilidadePage />} />
             <Route path="manutencoes" element={<ManutencoesPage />} />
