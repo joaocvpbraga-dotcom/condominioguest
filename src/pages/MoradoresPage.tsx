@@ -11,6 +11,7 @@ import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured, callAdminFunction } from '@/lib/supabase'
+import { criarUtilizador } from '@/lib/adminFunctions'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
@@ -71,17 +72,15 @@ export function MoradoresPage() {
     setSavingNovoUser(true)
 
     if (isSupabaseConfigured) {
-      const { data, error } = await callAdminFunction<{ id: string; nome: string; email: string; role: Profile['role']; condominio_id: string }>('create-user', {
-        email: novoUserForm.email,
-        password: novoUserForm.senha,
-        nome: novoUserForm.nome,
-        role: novoUserForm.role,
-      })
-      if (error) { alert(`Erro ao criar utilizador: ${error}`); setSavingNovoUser(false); return }
-      if (data) {
-        const newProfile: Profile = { id: data.id, nome: data.nome, email: data.email, role: data.role, condominio_id: data.condominio_id, created_at: new Date().toISOString() }
+      try {
+        const data = await criarUtilizador({ email: novoUserForm.email, password: novoUserForm.senha, nome: novoUserForm.nome })
+        const newProfile: Profile = { id: data.id ?? crypto.randomUUID(), nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
         setUtilizadores(prev => [newProfile, ...prev])
         setMoradores(prev => [newProfile, ...prev])
+      } catch (e: unknown) {
+        alert(`Erro ao criar utilizador: ${e instanceof Error ? e.message : e}`)
+        setSavingNovoUser(false)
+        return
       }
     } else {
       const newProfile: Profile = { id: crypto.randomUUID(), nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
