@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Zap, Euro } from 'lucide-react'
 import type { Quota } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 const estadoVariant: Record<string, 'success' | 'warning' | 'danger'> = {
   pago: 'success', pendente: 'warning', em_atraso: 'danger',
@@ -18,6 +19,12 @@ const estadoLabel: Record<string, string> = {
 
 export function QuotasPage() {
   const { fracoes: contextFracoes, quotas, setQuotas } = useAppData()
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+
+  // Fração(ões) do morador atual
+  const minhasFracoes = contextFracoes.filter(f => f.proprietario_id === profile?.id).map(f => f.id)
+
   const FRACOES = contextFracoes.map(f => ({
     id: f.id,
     label: f.numero,
@@ -85,7 +92,10 @@ export function QuotasPage() {
   }
 
   // ── derived ──────────────────────────────────────────────────
-  const filtered = quotas.filter(q => {
+  // Moradores only see quotas for their own frações
+  const quotasVisiveis = isAdmin ? quotas : quotas.filter(q => minhasFracoes.includes(q.fracao_id))
+
+  const filtered = quotasVisiveis.filter(q => {
     const matchFilter = filter === 'todos' || q.estado === filter
     const matchSearch = fracaoLabel(q.fracao_id).toLowerCase().includes(search.toLowerCase()) ||
       fracaoProprietario(q.fracao_id).toLowerCase().includes(search.toLowerCase()) ||
@@ -93,10 +103,10 @@ export function QuotasPage() {
     return matchFilter && matchSearch
   })
 
-  const totalPago = quotas.filter(q => q.estado === 'pago').reduce((s, q) => s + q.valor, 0)
-  const totalPendente = quotas.filter(q => q.estado === 'pendente').reduce((s, q) => s + q.valor, 0)
-  const totalAtraso = quotas.filter(q => q.estado === 'em_atraso').reduce((s, q) => s + q.valor, 0)
-  const taxaCobrança = Math.round((quotas.filter(q => q.estado === 'pago').length / quotas.length) * 100)
+  const totalPago = quotasVisiveis.filter(q => q.estado === 'pago').reduce((s, q) => s + q.valor, 0)
+  const totalPendente = quotasVisiveis.filter(q => q.estado === 'pendente').reduce((s, q) => s + q.valor, 0)
+  const totalAtraso = quotasVisiveis.filter(q => q.estado === 'em_atraso').reduce((s, q) => s + q.valor, 0)
+  const taxaCobrança = quotasVisiveis.length > 0 ? Math.round((quotasVisiveis.filter(q => q.estado === 'pago').length / quotasVisiveis.length) * 100) : 0
 
   // ── actions ──────────────────────────────────────────────────
   function confirmarPagamento() {
@@ -160,25 +170,27 @@ export function QuotasPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Quotas & Pagamentos</h1>
-          <p className="text-slate-500 mt-1 text-sm">Controlo de cobranças e receitas do condomínio</p>
+          <h1 className="text-2xl font-bold text-slate-800">{isAdmin ? 'Quotas & Pagamentos' : 'As Minhas Quotas'}</h1>
+          <p className="text-slate-500 mt-1 text-sm">{isAdmin ? 'Controlo de cobranças e receitas do condomínio' : 'Os seus pagamentos e quotas em atraso'}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={openMassModal}>
-            <Zap size={16} /> Emitir em Massa
-          </Button>
-          <Button onClick={() => { setNovaForm(EMPTY_QUOTA_FORM); setNovaModal(true) }}>
-            <Plus size={16} /> Nova Quota
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openMassModal}>
+              <Zap size={16} /> Emitir em Massa
+            </Button>
+            <Button onClick={() => { setNovaForm(EMPTY_QUOTA_FORM); setNovaModal(true) }}>
+              <Plus size={16} /> Nova Quota
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Cobrado', value: formatCurrency(totalPago), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', sub: `${quotas.filter(q => q.estado === 'pago').length} quotas` },
-          { label: 'Pendente', value: formatCurrency(totalPendente), icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-50', sub: `${quotas.filter(q => q.estado === 'pendente').length} quotas` },
-          { label: 'Em Atraso', value: formatCurrency(totalAtraso), icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', sub: `${quotas.filter(q => q.estado === 'em_atraso').length} quotas` },
+          { label: 'Pago', value: formatCurrency(totalPago), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', sub: `${quotasVisiveis.filter(q => q.estado === 'pago').length} quotas` },
+          { label: 'Pendente', value: formatCurrency(totalPendente), icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-50', sub: `${quotasVisiveis.filter(q => q.estado === 'pendente').length} quotas` },
+          { label: 'Em Atraso', value: formatCurrency(totalAtraso), icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', sub: `${quotasVisiveis.filter(q => q.estado === 'em_atraso').length} quotas` },
           { label: 'Taxa de Cobrança', value: `${taxaCobrança}%`, icon: CheckCircle2, color: 'text-blue-600', bg: 'bg-blue-50', sub: 'do total emitido' },
         ].map(k => (
           <div key={k.label} className={`rounded-xl p-4 ${k.bg} flex items-center gap-3`}>
@@ -203,7 +215,7 @@ export function QuotasPage() {
             >
               {f === 'todos' ? 'Todos' : estadoLabel[f]}
               <span className="ml-1.5 text-xs opacity-60">
-                {f === 'todos' ? quotas.length : quotas.filter(q => q.estado === f).length}
+                {f === 'todos' ? quotasVisiveis.length : quotasVisiveis.filter(q => q.estado === f).length}
               </span>
             </button>
           ))}
@@ -254,7 +266,7 @@ export function QuotasPage() {
                     {q.data_pagamento ? formatDate(q.data_pagamento) : '—'}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    {q.estado !== 'pago' && (
+                    {isAdmin && q.estado !== 'pago' && (
                       <Button
                         size="sm"
                         variant="outline"

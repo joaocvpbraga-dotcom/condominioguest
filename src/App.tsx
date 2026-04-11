@@ -33,7 +33,7 @@ function App() {
           >
             <Route index element={<AdminRoute><DashboardPage /></AdminRoute>} />
             <Route path="moradores" element={<AdminRoute><MoradoresPage /></AdminRoute>} />
-            <Route path="quotas" element={<AdminRoute><QuotasPage /></AdminRoute>} />
+            <Route path="quotas" element={<QuotasPage />} />
             <Route path="ocorrencias" element={<OcorrenciasPage />} />
             <Route path="comunicados" element={<ComunicadosPage />} />
             <Route path="documentos" element={<DocumentosPage />} />
