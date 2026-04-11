@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDate } from '@/lib/utils'
-import { FileText, Plus, Download, File, AlertTriangle, Bell, Send } from 'lucide-react'
+import { FileText, Plus, Download, File, AlertTriangle, Bell, Send, Pencil, Trash2 } from 'lucide-react'
 import type { Documento, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -44,6 +44,7 @@ export function DocumentosPage() {
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
+  const [editDoc, setEditDoc] = useState<Documento | null>(null)
   const [openAlertModal, setOpenAlertModal] = useState(false)
   const [alertDoc, setAlertDoc] = useState<Documento | null>(null)
   const [alertDest, setAlertDest] = useState('')
@@ -51,6 +52,17 @@ export function DocumentosPage() {
     nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo',
     data_validade: '', periodo: 'mensal' as Documento['periodo'],
   })
+
+  function openEdit(d: Documento) {
+    setEditDoc(d)
+    setForm({ nome: d.nome, descricao: d.descricao ?? '', categoria: d.categoria, data_validade: d.data_validade ?? '', periodo: d.periodo ?? 'mensal' })
+    setOpenModal(true)
+  }
+
+  function handleDelete(d: Documento) {
+    if (!window.confirm(`Eliminar "${d.nome}"? Esta ação não pode ser desfeita.`)) return
+    setDocumentos(prev => prev.filter(x => x.id !== d.id))
+  }
 
   function enviarAlerta() {
     if (!alertDoc) return
@@ -106,21 +118,34 @@ export function DocumentosPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.nome) return
-    const novo: Documento = {
-      id: `d-${Date.now()}`,
-      condominio_id: 'c1',
-      nome: form.nome,
-      descricao: form.descricao || undefined,
-      categoria: form.categoria as Documento['categoria'],
-      url: '#',
-      autor_id: profile?.id ?? 'demo',
-      morador_id: !isAdmin ? profile?.id : undefined,
-      data_validade: form.data_validade || undefined,
-      periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
-      created_at: new Date().toISOString(),
+    if (editDoc) {
+      const updated: Documento = {
+        ...editDoc,
+        nome: form.nome,
+        descricao: form.descricao || undefined,
+        categoria: form.categoria as Documento['categoria'],
+        data_validade: form.data_validade || undefined,
+        periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
+      }
+      setDocumentos(prev => prev.map(d => d.id === editDoc.id ? updated : d))
+    } else {
+      const novo: Documento = {
+        id: `d-${Date.now()}`,
+        condominio_id: 'c1',
+        nome: form.nome,
+        descricao: form.descricao || undefined,
+        categoria: form.categoria as Documento['categoria'],
+        url: '#',
+        autor_id: profile?.id ?? 'demo',
+        morador_id: !isAdmin ? profile?.id : undefined,
+        data_validade: form.data_validade || undefined,
+        periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
+        created_at: new Date().toISOString(),
+      }
+      setDocumentos(prev => [novo, ...prev])
     }
-    setDocumentos(prev => [novo, ...prev])
     setOpenModal(false)
+    setEditDoc(null)
     setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal' })
   }
 
@@ -132,7 +157,7 @@ export function DocumentosPage() {
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
           <p className="text-slate-500 mt-1">Atas, regulamentos, seguros e comprovativos</p>
         </div>
-        <Button onClick={() => setOpenModal(true)}>
+        <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal' }); setOpenModal(true) }}>
           <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Enviar Comprovativo'}
         </Button>
       </div>
@@ -207,9 +232,21 @@ export function DocumentosPage() {
                       )}
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost" title="Descarregar">
-                    <Download size={16} />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" title="Descarregar">
+                      <Download size={16} />
+                    </Button>
+                    {(isAdmin || d.morador_id === profile?.id) && (
+                      <>
+                        <button onClick={() => openEdit(d)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(d)} title="Eliminar" className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                          <Trash2 size={15} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </Card>
             )
@@ -218,7 +255,7 @@ export function DocumentosPage() {
       )}
 
       {/* Modal de upload */}
-      <Modal open={openModal} onClose={() => setOpenModal(false)} title={isAdmin ? 'Novo Documento' : 'Enviar Comprovativo de Pagamento'}>
+      <Modal open={openModal} onClose={() => { setOpenModal(false); setEditDoc(null) }} title={editDoc ? 'Editar Documento' : isAdmin ? 'Novo Documento' : 'Enviar Comprovativo de Pagamento'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Input label="Nome" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder={isAdmin ? 'Nome do documento' : 'Ex: Quota Janeiro 2026'} required />
 
