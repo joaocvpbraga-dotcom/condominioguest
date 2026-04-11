@@ -114,6 +114,7 @@ export interface Documento {
   tamanho?: number
   autor_id: string
   morador_id?: string
+  fracao_id?: string
   data_validade?: string
   periodo?: 'mensal' | 'trimestral' | 'semestral' | 'anual'
   created_at: string

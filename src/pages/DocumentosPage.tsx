@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDate } from '@/lib/utils'
-import { FileText, Plus, Download, File, AlertTriangle, Bell, Send, Pencil, Trash2 } from 'lucide-react'
+import { FileText, Plus, Download, File, AlertTriangle, Bell, Send, Pencil, Trash2, Home } from 'lucide-react'
 import type { Documento, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -38,8 +38,59 @@ function daysUntil(dateStr: string) {
 const adminCategories = ['ata', 'regulamento', 'contrato', 'seguro', 'comprovativo', 'outro']
 const moradorCategories = ['seguro', 'comprovativo', 'outro']
 
+function DocCard({ d, isAdmin, profile, openEdit, handleDelete }: {
+  d: Documento
+  isAdmin: boolean
+  profile: { id: string; role: string } | null
+  openEdit: (d: Documento) => void
+  handleDelete: (d: Documento) => void
+}) {
+  const expiryDays = d.data_validade ? daysUntil(d.data_validade) : null
+  return (
+    <Card className={`hover:shadow-md transition-shadow ${expiryDays !== null && expiryDays <= 15 ? 'border-red-200' : expiryDays !== null && expiryDays <= 60 ? 'border-orange-200' : ''}`}>
+      <div className="px-5 py-4 flex items-center gap-4">
+        <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
+          <File size={20} className="text-slate-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-slate-800 truncate">{d.nome}</p>
+            <Badge variant={catVariant[d.categoria]}>{catLabel[d.categoria]}</Badge>
+            {d.periodo && <span className="text-xs text-slate-400">{periodoLabel[d.periodo]}</span>}
+          </div>
+          {d.descricao && <p className="text-xs text-slate-500 mt-0.5 truncate">{d.descricao}</p>}
+          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
+            <span>{formatDate(d.created_at)}</span>
+            {d.tamanho && <span>{formatBytes(d.tamanho)}</span>}
+            {d.data_validade && (
+              <span className={`font-medium ${expiryDays! <= 0 ? 'text-red-600' : expiryDays! <= 15 ? 'text-red-500' : expiryDays! <= 60 ? 'text-orange-500' : 'text-slate-400'}`}>
+                Válido até {formatDate(d.data_validade)}{expiryDays !== null && expiryDays <= 60 && ` (${expiryDays <= 0 ? 'Expirado' : expiryDays + ' dias'})`}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" title="Descarregar">
+            <Download size={16} />
+          </Button>
+          {(isAdmin || d.morador_id === profile?.id) && (
+            <>
+              <button onClick={() => openEdit(d)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                <Pencil size={15} />
+              </button>
+              <button onClick={() => handleDelete(d)} title="Eliminar" className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                <Trash2 size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export function DocumentosPage() {
-  const { documentos, setDocumentos, moradores, setComunicados } = useAppData()
+  const { documentos, setDocumentos, moradores, fracoes, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
 
@@ -51,11 +102,11 @@ export function DocumentosPage() {
   const [alertDest, setAlertDest] = useState('')
   const [form, setForm] = useState({
     nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo',
-    data_validade: '', periodo: 'mensal' as Documento['periodo'],
+    data_validade: '', periodo: 'mensal' as Documento['periodo'], fracao_id: '',
   })
   function openEdit(d: Documento) {
     setEditDoc(d)
-    setForm({ nome: d.nome, descricao: d.descricao ?? '', categoria: d.categoria, data_validade: d.data_validade ?? '', periodo: d.periodo ?? 'mensal' })
+    setForm({ nome: d.nome, descricao: d.descricao ?? '', categoria: d.categoria, data_validade: d.data_validade ?? '', periodo: d.periodo ?? 'mensal', fracao_id: d.fracao_id ?? '' })
     setOpenModal(true)
   }
 
@@ -108,6 +159,9 @@ export function DocumentosPage() {
 
   const visibleCategories = isAdmin ? adminCategories : moradorCategories
 
+  // Agrupar por fração quando o filtro é seguro ou comprovativo
+  const groupByFracao = catFilter === 'seguro' || catFilter === 'comprovativo'
+
   const filtered = useMemo(() => {
     let list = documentos
     if (!isAdmin) list = list.filter(d => d.categoria !== 'comprovativo' || d.morador_id === profile?.id)
@@ -115,9 +169,29 @@ export function DocumentosPage() {
     return list
   }, [documentos, catFilter, isAdmin, profile?.id])
 
+  // Agrupar documentos por fração para visualização
+  const groupedByFracao = useMemo(() => {
+    if (!groupByFracao) return null
+    const groups: { fracao: { id: string; numero: string; proprietario?: string } | null; docs: typeof filtered }[] = []
+    const withFracao = filtered.filter(d => d.fracao_id)
+    const withoutFracao = filtered.filter(d => !d.fracao_id)
+
+    fracoes.forEach(f => {
+      const docs = withFracao.filter(d => d.fracao_id === f.id)
+      if (docs.length > 0) {
+        groups.push({ fracao: { id: f.id, numero: f.numero, proprietario: f.proprietario?.nome }, docs })
+      }
+    })
+    if (withoutFracao.length > 0) {
+      groups.push({ fracao: null, docs: withoutFracao })
+    }
+    return groups
+  }, [filtered, groupByFracao, fracoes])
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.nome) return
+    const fracaoId = (form.categoria === 'seguro' || form.categoria === 'comprovativo') && form.fracao_id ? form.fracao_id : undefined
     if (editDoc) {
       const updated: Documento = {
         ...editDoc,
@@ -126,6 +200,7 @@ export function DocumentosPage() {
         categoria: form.categoria as Documento['categoria'],
         data_validade: form.data_validade || undefined,
         periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
+        fracao_id: fracaoId,
       }
       setDocumentos(prev => prev.map(d => d.id === editDoc.id ? updated : d))
     } else {
@@ -138,6 +213,7 @@ export function DocumentosPage() {
         url: '#',
         autor_id: profile?.id ?? 'demo',
         morador_id: !isAdmin ? profile?.id : undefined,
+        fracao_id: fracaoId,
         data_validade: form.data_validade || undefined,
         periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
         created_at: new Date().toISOString(),
@@ -146,7 +222,7 @@ export function DocumentosPage() {
     }
     setOpenModal(false)
     setEditDoc(null)
-    setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal' })
+    setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' })
   }
 
   return (
@@ -157,7 +233,7 @@ export function DocumentosPage() {
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
           <p className="text-slate-500 mt-1">Atas, regulamentos, seguros e comprovativos</p>
         </div>
-        <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal' }); setOpenModal(true) }}>
+        <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' }); setOpenModal(true) }}>
           <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Novo Documento'}
         </Button>
       </div>
@@ -205,52 +281,28 @@ export function DocumentosPage() {
       {/* Lista */}
       {filtered.length === 0 ? (
         <EmptyState icon={<FileText size={48} />} title="Sem documentos" description={isAdmin ? 'Carregue o primeiro documento.' : 'Ainda não há documentos disponíveis.'} action={<Button onClick={() => setOpenModal(true)}><Plus size={16} /> {isAdmin ? 'Carregar' : 'Enviar Comprovativo'}</Button>} />
+      ) : groupedByFracao ? (
+        // Vista agrupada por fração (seguros e comprovativos)
+        <div className="space-y-6">
+          {groupedByFracao.map(({ fracao, docs }) => (
+            <div key={fracao?.id ?? 'geral'}>
+              <div className="flex items-center gap-2 mb-3">
+                <Home size={16} className="text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+                  {fracao ? `Fração ${fracao.numero}${fracao.proprietario ? ` — ${fracao.proprietario}` : ''}` : 'Geral / Sem fração'}
+                </h3>
+                <div className="flex-1 border-t border-slate-200" />
+                <span className="text-xs text-slate-400">{docs.length} doc{docs.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {docs.map(d => <DocCard key={d.id} d={d} isAdmin={isAdmin} profile={profile} openEdit={openEdit} handleDelete={handleDelete} />)}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map(d => {
-            const expiryDays = d.data_validade ? daysUntil(d.data_validade) : null
-            return (
-              <Card key={d.id} className={`hover:shadow-md transition-shadow ${expiryDays !== null && expiryDays <= 15 ? 'border-red-200' : expiryDays !== null && expiryDays <= 60 ? 'border-orange-200' : ''}`}>
-                <div className="px-5 py-4 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                    <File size={20} className="text-slate-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-slate-800 truncate">{d.nome}</p>
-                      <Badge variant={catVariant[d.categoria]}>{catLabel[d.categoria]}</Badge>
-                      {d.periodo && <span className="text-xs text-slate-400">{periodoLabel[d.periodo]}</span>}
-                    </div>
-                    {d.descricao && <p className="text-xs text-slate-500 mt-0.5 truncate">{d.descricao}</p>}
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
-                      <span>{formatDate(d.created_at)}</span>
-                      {d.tamanho && <span>{formatBytes(d.tamanho)}</span>}
-                      {d.data_validade && (
-                        <span className={`font-medium ${expiryDays! <= 0 ? 'text-red-600' : expiryDays! <= 15 ? 'text-red-500' : expiryDays! <= 60 ? 'text-orange-500' : 'text-slate-400'}`}>
-                          Válido até {formatDate(d.data_validade)}{expiryDays !== null && expiryDays <= 60 && ` (${expiryDays <= 0 ? 'Expirado' : expiryDays + ' dias'})`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" title="Descarregar">
-                      <Download size={16} />
-                    </Button>
-                    {(isAdmin || d.morador_id === profile?.id) && (
-                      <>
-                        <button onClick={() => openEdit(d)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                          <Pencil size={15} />
-                        </button>
-                        <button onClick={() => handleDelete(d)} title="Eliminar" className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                          <Trash2 size={15} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
+          {filtered.map(d => <DocCard key={d.id} d={d} isAdmin={isAdmin} profile={profile} openEdit={openEdit} handleDelete={handleDelete} />)}
         </div>
       )}
 
@@ -265,6 +317,18 @@ export function DocumentosPage() {
             onChange={e => setForm({ ...form, categoria: e.target.value })}
             options={(isAdmin ? adminCategories : moradorCategories).map(c => ({ value: c, label: catLabel[c] }))}
           />
+
+          {(form.categoria === 'seguro' || form.categoria === 'comprovativo') && fracoes.length > 0 && (
+            <Select
+              label="Fração associada"
+              value={form.fracao_id}
+              onChange={e => setForm({ ...form, fracao_id: e.target.value })}
+              options={[
+                { value: '', label: '— Geral (sem fração) —' },
+                ...fracoes.map(f => ({ value: f.id, label: `Fração ${f.numero}${f.proprietario?.nome ? ` — ${f.proprietario.nome}` : ''}` })),
+              ]}
+            />
+          )}
 
           {form.categoria === 'comprovativo' && (
             <Select
