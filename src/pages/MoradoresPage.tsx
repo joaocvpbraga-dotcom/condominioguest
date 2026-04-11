@@ -672,18 +672,20 @@ export function MoradoresPage() {
             />
           )}
           <Select label="Perfil" value={formMorador.role} onChange={e => setFormMorador({ ...formMorador, role: e.target.value })} options={[{ value: 'morador', label: 'Proprietário' }, { value: 'admin', label: 'Administrador' }, { value: 'funcionario', label: 'Inquilino' }]} />
-          <Select
-            label="Fração associada"
-            value={formMorador.fracao_id}
-            onChange={e => setFormMorador({ ...formMorador, fracao_id: e.target.value })}
-            options={[
-              { value: '', label: 'Sem fração associada' },
-              ...fracoes
-                .filter(f => !f.proprietario_id || f.proprietario_id === editMorador?.id)
-                .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }))
-                .map(f => ({ value: f.id, label: `Fração ${f.numero}${f.andar ? ` — ${f.andar}º andar` : ''} (${f.tipo})` })),
-            ]}
-          />
+          {editMorador && (
+            <Select
+              label="Fração associada"
+              value={formMorador.fracao_id}
+              onChange={e => setFormMorador({ ...formMorador, fracao_id: e.target.value })}
+              options={[
+                { value: '', label: 'Sem fração associada' },
+                ...fracoes
+                  .filter(f => !f.proprietario_id || f.proprietario_id === editMorador?.id)
+                  .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }))
+                  .map(f => ({ value: f.id, label: `Fração ${f.numero}${f.andar ? ` — ${f.andar}º andar` : ''} (${f.tipo})` })),
+              ]}
+            />
+          )}
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => { setOpenMorador(false); setEditMorador(null); setFormMorador(EMPTY_MORADOR) }}>Cancelar</Button>
             <Button type="submit">{editMorador ? 'Guardar alterações' : 'Guardar'}</Button>
