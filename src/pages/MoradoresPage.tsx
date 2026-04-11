@@ -86,7 +86,8 @@ export function MoradoresPage() {
         if (error) { alert(`Erro ao criar login: ${error.message}`); setSavingNovoUser(false); return }
         if (signUpData.user) userId = signUpData.user.id
       }
-      const { error: profileError } = await supabase.from('profiles').upsert({
+      const profileClient = adminSupabase ?? supabase
+      const { error: profileError } = await profileClient.from('profiles').upsert({
         id: userId, nome: novoUserForm.nome, email: novoUserForm.email,
         role: novoUserForm.role, condominio_id: profile.condominio_id,
         created_at: new Date().toISOString(),
