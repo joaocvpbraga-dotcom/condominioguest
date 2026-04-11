@@ -42,7 +42,6 @@ export function DocumentosPage() {
   const { documentos, setDocumentos, moradores, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const isMorador = profile?.role === 'morador' || profile?.role === 'funcionario'
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
