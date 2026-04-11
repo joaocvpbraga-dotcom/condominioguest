@@ -10,7 +10,7 @@ import { Users, Plus, Search, Phone, Mail, Pencil, Home, Building2, Trash2, User
 import type { Profile, Fracao, PermissoesMorador } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured, createIsolatedClient, adminSupabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, callAdminFunction } from '@/lib/supabase'
 
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Morador', funcionario: 'Funcionário' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
@@ -69,35 +69,26 @@ export function MoradoresPage() {
     e.preventDefault()
     if (!novoUserForm.nome || !novoUserForm.email || !novoUserForm.senha) return
     setSavingNovoUser(true)
-    let userId = crypto.randomUUID()
 
-    if (isSupabaseConfigured && profile?.condominio_id) {
-      if (adminSupabase) {
-        const { data: created, error } = await adminSupabase.auth.admin.createUser({
-          email: novoUserForm.email,
-          password: novoUserForm.senha,
-          email_confirm: true,
-        })
-        if (error) { alert(`Erro ao criar login: ${error.message}`); setSavingNovoUser(false); return }
-        if (created.user) userId = created.user.id
-      } else {
-        const isolated = createIsolatedClient()
-        const { data: signUpData, error } = await isolated.auth.signUp({ email: novoUserForm.email, password: novoUserForm.senha })
-        if (error) { alert(`Erro ao criar login: ${error.message}`); setSavingNovoUser(false); return }
-        if (signUpData.user) userId = signUpData.user.id
-      }
-      const profileClient = adminSupabase ?? supabase
-      const { error: profileError } = await profileClient.from('profiles').upsert({
-        id: userId, nome: novoUserForm.nome, email: novoUserForm.email,
-        role: novoUserForm.role, condominio_id: profile.condominio_id,
-        created_at: new Date().toISOString(),
+    if (isSupabaseConfigured) {
+      const { data, error } = await callAdminFunction<{ id: string; nome: string; email: string; role: Profile['role']; condominio_id: string }>('create-user', {
+        email: novoUserForm.email,
+        password: novoUserForm.senha,
+        nome: novoUserForm.nome,
+        role: novoUserForm.role,
       })
-      if (profileError) { alert(`Erro ao guardar perfil: ${profileError.message}`); setSavingNovoUser(false); return }
+      if (error) { alert(`Erro ao criar utilizador: ${error}`); setSavingNovoUser(false); return }
+      if (data) {
+        const newProfile: Profile = { id: data.id, nome: data.nome, email: data.email, role: data.role, condominio_id: data.condominio_id, created_at: new Date().toISOString() }
+        setUtilizadores(prev => [newProfile, ...prev])
+        setMoradores(prev => [newProfile, ...prev])
+      }
+    } else {
+      const newProfile: Profile = { id: crypto.randomUUID(), nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+      setUtilizadores(prev => [newProfile, ...prev])
+      setMoradores(prev => [newProfile, ...prev])
     }
 
-    const newProfile: Profile = { id: userId, nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
-    setUtilizadores(prev => [newProfile, ...prev])
-    setMoradores(prev => [newProfile, ...prev])
     setNovoUserForm({ nome: '', email: '', senha: '', role: 'morador' })
     setOpenNovoUser(false)
     setSavingNovoUser(false)
@@ -107,13 +98,9 @@ export function MoradoresPage() {
     if (!window.confirm(`Eliminar "${u.nome}" (${u.email})? Esta ação não pode ser desfeita.`)) return
     setDeletingUser(u.id)
     if (isSupabaseConfigured) {
-      // Delete from auth.users via admin client (if available)
-      if (adminSupabase) {
-        await adminSupabase.auth.admin.deleteUser(u.id)
-      }
-      const { error } = await supabase.from('profiles').delete().eq('id', u.id)
-      if (error && error.code !== 'PGRST116') {
-        alert(`Erro ao eliminar: ${error.message}`)
+      const { error } = await callAdminFunction('delete-user', { userId: u.id })
+      if (error) {
+        alert(`Erro ao eliminar: ${error}`)
         setDeletingUser(null)
         return
       }
@@ -127,9 +114,8 @@ export function MoradoresPage() {
   async function handleRoleChange(u: Profile, newRole: Profile['role']) {
     setChangingRole(u.id)
     if (isSupabaseConfigured) {
-      const client = adminSupabase ?? supabase
-      const { error } = await client.from('profiles').update({ role: newRole }).eq('id', u.id)
-      if (error) { alert(`Erro ao alterar perfil: ${error.message}`); setChangingRole(null); return }
+      const { error } = await callAdminFunction('update-role', { userId: u.id, role: newRole })
+      if (error) { alert(`Erro ao alterar perfil: ${error}`); setChangingRole(null); return }
     }
     setUtilizadores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
     setMoradores(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
