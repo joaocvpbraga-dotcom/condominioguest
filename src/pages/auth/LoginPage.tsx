@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, Link, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
@@ -84,7 +84,7 @@ export function LoginPage() {
           )}
 
           <p className="mt-4 text-center text-sm text-slate-500">
-            (Conta criada apenas por administrador)
+            Conta criada apenas pelo administrador.
           </p>
         </div>
       </div>
