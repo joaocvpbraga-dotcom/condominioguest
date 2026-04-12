@@ -1,49 +1,32 @@
-const SUPER_TASK_URL = 'https://kypvylnyugmiukobsjoi.supabase.co/functions/v1/super-task'
+import { callAdminFunction } from '@/lib/supabase'
 
-export async function criarUtilizador({ email, password, nome }: {
+export async function criarUtilizador({ email, password, nome, role }: {
   email: string
   password: string
   nome: string
+  role?: 'admin' | 'morador' | 'funcionario'
 }) {
-  const res = await fetch(SUPER_TASK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'create', email, password, nome }),
-  })
-
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Erro ao criar utilizador')
+  const { data, error } = await callAdminFunction<{
+    id: string
+    nome: string
+    email: string
+    role: 'admin' | 'morador' | 'funcionario'
+    condominio_id?: string
+  }>('create-user', { email, password, nome, role })
+  if (error || !data) throw new Error(error || 'Erro ao criar utilizador')
   return data
 }
 
 export async function eliminarUtilizador(userId: string, accessToken: string) {
-  const res = await fetch(SUPER_TASK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ action: 'delete', userId }),
-  })
-
-  const text = await res.text()
-  let data: Record<string, unknown> = {}
-  try { data = JSON.parse(text) } catch { /* ignore */ }
-  if (!res.ok) throw new Error(data.error as string || `HTTP ${res.status}: ${text}`)
+  void accessToken
+  const { data, error } = await callAdminFunction<Record<string, unknown>>('delete-user', { userId })
+  if (error || !data) throw new Error(error || 'Erro ao eliminar utilizador')
   return data
 }
 
 export async function atualizarRole(userId: string, role: string, accessToken: string) {
-  const res = await fetch(SUPER_TASK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ action: 'update-role', userId, role }),
-  })
-
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Erro ao atualizar perfil')
+  void accessToken
+  const { data, error } = await callAdminFunction<Record<string, unknown>>('update-role', { userId, role })
+  if (error || !data) throw new Error(error || 'Erro ao atualizar perfil')
   return data
 }
