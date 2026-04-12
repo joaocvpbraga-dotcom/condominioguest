@@ -20,6 +20,19 @@ const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'in
 const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '', senha: '' }
 const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
 
+function getNovoUtilizadorErrorMessage(error: unknown): string {
+  const raw = (error instanceof Error ? error.message : String(error)).toLowerCase()
+  if (
+    raw.includes('already been registered') ||
+    raw.includes('already registered') ||
+    raw.includes('user already registered') ||
+    raw.includes('email_exists')
+  ) {
+    return 'Este email ja esta registado. Use outro email ou recupere a palavra-passe.'
+  }
+  return error instanceof Error ? error.message : String(error)
+}
+
 export function MoradoresPage() {
   const [tab, setTab] = useState<'moradores' | 'fracoes' | 'utilizadores' | 'permissoes'>('moradores')
 
@@ -74,7 +87,17 @@ export function MoradoresPage() {
       alert('Apenas administradores podem criar utilizadores.')
       return
     }
-    if (!novoUserForm.nome || !novoUserForm.email || !novoUserForm.senha) return
+    const nome = novoUserForm.nome.trim()
+    const email = novoUserForm.email.trim().toLowerCase()
+    const senha = novoUserForm.senha
+    if (!nome || !email || !senha) return
+
+    const emailJaExiste = [...utilizadores, ...moradores].some(u => u.email?.trim().toLowerCase() === email)
+    if (emailJaExiste) {
+      alert('Este email ja esta registado. Escolha outro email ou recupere a palavra-passe.')
+      return
+    }
+
     if (novoUserForm.role === 'funcionario' && !isAdmin) {
       alert('Apenas administradores podem criar login de inquilino.')
       return
@@ -83,29 +106,29 @@ export function MoradoresPage() {
 
     if (isSupabaseConfigured) {
       try {
-        const data = await criarUtilizador({ email: novoUserForm.email, password: novoUserForm.senha, nome: novoUserForm.nome })
+        const data = await criarUtilizador({ email, password: senha, nome })
         const userId = data.id ?? crypto.randomUUID()
         // Guardar perfil completo (com condominio_id e role) no Supabase
         if (profile?.condominio_id) {
           await supabase.from('profiles').upsert({
             id: userId,
-            nome: novoUserForm.nome,
-            email: novoUserForm.email,
+            nome,
+            email,
             role: novoUserForm.role,
             condominio_id: profile.condominio_id,
             created_at: new Date().toISOString(),
           })
         }
-        const newProfile: Profile = { id: userId, nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+        const newProfile: Profile = { id: userId, nome, email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
         setUtilizadores(prev => [newProfile, ...prev])
         setMoradores(prev => [newProfile, ...prev])
       } catch (e: unknown) {
-        alert(`Erro ao criar utilizador: ${e instanceof Error ? e.message : e}`)
+        alert(`Erro ao criar utilizador: ${getNovoUtilizadorErrorMessage(e)}`)
         setSavingNovoUser(false)
         return
       }
     } else {
-      const newProfile: Profile = { id: crypto.randomUUID(), nome: novoUserForm.nome, email: novoUserForm.email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
+      const newProfile: Profile = { id: crypto.randomUUID(), nome, email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
       setUtilizadores(prev => [newProfile, ...prev])
       setMoradores(prev => [newProfile, ...prev])
     }
