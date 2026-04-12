@@ -69,8 +69,16 @@ export function MoradoresPage() {
   async function fetchUtilizadores() {
     if (!isSupabaseConfigured) { setUtilizadores(moradores); return }
     setLoadingUsers(true)
-    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-    if (!error && data) setUtilizadores(data as Profile[])
+    const query = profile?.condominio_id
+      ? supabase.from('profiles').select('*').eq('condominio_id', profile.condominio_id)
+      : supabase.from('profiles').select('*')
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (!error && data) {
+      const profiles = data as Profile[]
+      setUtilizadores(profiles)
+      setMoradores(profiles)
+    }
     setLoadingUsers(false)
   }
 
@@ -110,7 +118,7 @@ export function MoradoresPage() {
         const userId = data.id ?? crypto.randomUUID()
         // Guardar perfil completo (com condominio_id e role) no Supabase
         if (profile?.condominio_id) {
-          await supabase.from('profiles').upsert({
+          const { error: upsertError } = await supabase.from('profiles').upsert({
             id: userId,
             nome,
             email,
@@ -118,6 +126,11 @@ export function MoradoresPage() {
             condominio_id: profile.condominio_id,
             created_at: new Date().toISOString(),
           })
+          if (upsertError) {
+            alert('Erro ao guardar perfil do utilizador no condominio.')
+            setSavingNovoUser(false)
+            return
+          }
         }
         const newProfile: Profile = { id: userId, nome, email, role: novoUserForm.role, condominio_id: profile?.condominio_id, created_at: new Date().toISOString() }
         setUtilizadores(prev => [newProfile, ...prev])
@@ -136,6 +149,7 @@ export function MoradoresPage() {
     setNovoUserForm({ nome: '', email: '', senha: '', role: 'morador' })
     setOpenNovoUser(false)
     setSavingNovoUser(false)
+    await fetchUtilizadores()
   }
 
   async function handleDeleteUtilizador(u: Profile) {
