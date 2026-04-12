@@ -30,6 +30,7 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const isAdmin = profile?.role === 'admin'
+  const isInquilino = profile?.role === 'funcionario'
 
   const now = new Date()
   const mesAtual = now.getMonth() + 1
@@ -122,6 +123,79 @@ export function DashboardPage() {
   const urgentes = ocorrencias.filter(o =>
     (o.prioridade === 'urgente' || o.tipo === 'risco') && (o.estado === 'aberta' || o.estado === 'aceite' || o.estado === 'em_analise')
   )
+
+  if (isInquilino) {
+    const comunicadosRecentes = comunicados
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 6)
+
+    const intervencoesAgendadas = manutencoes
+      .filter(m => m.estado === 'agendada' && m.data_agendada && new Date(m.data_agendada) >= now)
+      .sort((a, b) => new Date(a.data_agendada!).getTime() - new Date(b.data_agendada!).getTime())
+      .slice(0, 6)
+
+    return (
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Painel do Inquilino</h1>
+            <p className="text-slate-400 mt-1 text-sm capitalize">{today}</p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/comunicados')}>
+            Ver comunicados
+          </Button>
+        </div>
+
+        <Card>
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-800 text-sm">Alertas de intervenções no prédio</h2>
+          </div>
+          {intervencoesAgendadas.length === 0 ? (
+            <div className="px-6 py-8 text-center text-slate-400 text-sm">Sem intervenções agendadas no momento.</div>
+          ) : (
+            <ul className="divide-y divide-slate-50">
+              {intervencoesAgendadas.map(i => (
+                <li key={i.id} className="px-6 py-3.5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">{i.titulo}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {i.data_agendada ? formatDate(i.data_agendada) : 'Data por confirmar'}
+                    </p>
+                  </div>
+                  <Badge variant="warning">Intervenção</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-slate-800 text-sm">Comunicados recentes</h2>
+            <button onClick={() => navigate('/comunicados')} className="text-xs text-blue-600 hover:underline font-medium">Ver todos</button>
+          </div>
+          {comunicadosRecentes.length === 0 ? (
+            <div className="px-6 py-8 text-center text-slate-400 text-sm">Sem comunicados publicados.</div>
+          ) : (
+            <ul className="divide-y divide-slate-50">
+              {comunicadosRecentes.map(c => (
+                <li key={c.id} className="px-6 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{c.titulo}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{formatDate(c.created_at)}</p>
+                    </div>
+                    {c.importante && <Badge variant="danger">Importante</Badge>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">

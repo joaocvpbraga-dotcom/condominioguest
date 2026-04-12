@@ -20,19 +20,29 @@ const adminNavItems = [
 ]
 
 const moradorNavItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/quotas', icon: CreditCard, label: 'As Minhas Quotas', end: false },
   { to: '/ocorrencias', icon: AlertTriangle, label: 'Ocorrências', end: false },
   { to: '/comunicados', icon: Megaphone, label: 'Comunicados', end: false },
   { to: '/documentos', icon: FileText, label: 'Documentos', end: false },
+  { to: '/contabilidade', icon: PiggyBank, label: 'Contabilidade', end: false },
   { to: '/manutencoes', icon: Wrench, label: 'Manutenções', end: false },
+]
+
+const inquilinoNavItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/comunicados', icon: Megaphone, label: 'Comunicados', end: false },
 ]
 
 export function Sidebar() {
   const { profile, signOut } = useAuth()
   const [open, setOpen] = useState(false)
 
-  const isAdmin = profile?.role === 'admin'
-  const navItems = isAdmin ? adminNavItems : moradorNavItems
+  const navItems = profile?.role === 'admin'
+    ? adminNavItems
+    : profile?.role === 'funcionario'
+      ? inquilinoNavItems
+      : moradorNavItems
 
   const nav = (
     <>
@@ -116,7 +126,7 @@ export function Sidebar() {
             </div>
             <span className="text-lg font-bold tracking-tight">CondoGest</span>
           </div>
-          <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <button onClick={() => setOpen(false)} title="Fechar menu" aria-label="Fechar menu" className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
             <X size={18} />
           </button>
         </div>

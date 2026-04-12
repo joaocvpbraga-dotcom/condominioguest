@@ -93,6 +93,7 @@ export function DocumentosPage() {
   const { documentos, setDocumentos, moradores, fracoes, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const isOwner = profile?.role === 'morador'
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
@@ -157,17 +158,17 @@ export function DocumentosPage() {
     [documentos]
   )
 
-  const visibleCategories = isAdmin ? adminCategories : moradorCategories
+  const visibleCategories = (isAdmin || isOwner) ? adminCategories : moradorCategories
 
   // Agrupar por fração quando o filtro é seguro ou comprovativo
   const groupByFracao = catFilter === 'seguro' || catFilter === 'comprovativo'
 
   const filtered = useMemo(() => {
     let list = documentos
-    if (!isAdmin) list = list.filter(d => d.categoria !== 'comprovativo' || d.morador_id === profile?.id)
+    if (!isAdmin && !isOwner) list = list.filter(d => d.categoria !== 'comprovativo' || d.morador_id === profile?.id)
     if (catFilter !== 'todos') list = list.filter(d => d.categoria === catFilter)
     return list
-  }, [documentos, catFilter, isAdmin, profile?.id])
+  }, [documentos, catFilter, isAdmin, isOwner, profile?.id])
 
   // Agrupar documentos por fração para visualização
   const groupedByFracao = useMemo(() => {
@@ -222,7 +223,7 @@ export function DocumentosPage() {
     }
     setOpenModal(false)
     setEditDoc(null)
-    setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' })
+    setForm({ nome: '', descricao: '', categoria: (isAdmin || isOwner) ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' })
   }
 
   return (
@@ -233,7 +234,7 @@ export function DocumentosPage() {
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
           <p className="text-slate-500 mt-1">Atas, regulamentos, seguros e comprovativos</p>
         </div>
-        <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' }); setOpenModal(true) }}>
+        <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: (isAdmin || isOwner) ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' }); setOpenModal(true) }}>
           <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Novo Documento'}
         </Button>
       </div>
@@ -315,7 +316,7 @@ export function DocumentosPage() {
             label="Categoria"
             value={form.categoria}
             onChange={e => setForm({ ...form, categoria: e.target.value })}
-            options={(isAdmin ? adminCategories : moradorCategories).map(c => ({ value: c, label: catLabel[c] }))}
+            options={((isAdmin || isOwner) ? adminCategories : moradorCategories).map(c => ({ value: c, label: catLabel[c] }))}
           />
 
           {(form.categoria === 'seguro' || form.categoria === 'comprovativo') && fracoes.length > 0 && (
@@ -356,7 +357,7 @@ export function DocumentosPage() {
           <Textarea label="Descrição" value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} rows={2} placeholder="Descrição opcional..." />
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Ficheiro</label>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium hover:file:bg-blue-100 transition-colors cursor-pointer" />
+            <input title="Anexar ficheiro" aria-label="Anexar ficheiro" type="file" accept=".pdf,.jpg,.jpeg,.png" className="w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium hover:file:bg-blue-100 transition-colors cursor-pointer" />
           </div>
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => setOpenModal(false)}>Cancelar</Button>

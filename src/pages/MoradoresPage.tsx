@@ -545,6 +545,8 @@ export function MoradoresPage() {
                           {u.id !== profile?.id && (
                             <div className="flex items-center gap-2 justify-end">
                               <select
+                                title="Alterar perfil do utilizador"
+                                aria-label="Alterar perfil do utilizador"
                                 value={pendingRoles[u.id] ?? u.role}
                                 disabled={changingRole === u.id}
                                 onChange={e => {

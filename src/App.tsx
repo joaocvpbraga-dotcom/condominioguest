@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppDataProvider } from '@/contexts/AppDataContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { AdminRoute } from '@/components/auth/AdminRoute'
+import { RoleRoute } from '@/components/auth/RoleRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
@@ -31,14 +31,14 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminRoute><DashboardPage /></AdminRoute>} />
-            <Route path="moradores" element={<AdminRoute><MoradoresPage /></AdminRoute>} />
-            <Route path="quotas" element={<QuotasPage />} />
-            <Route path="ocorrencias" element={<OcorrenciasPage />} />
-            <Route path="comunicados" element={<ComunicadosPage />} />
-            <Route path="documentos" element={<DocumentosPage />} />
-            <Route path="contabilidade" element={<ContabilidadePage />} />
-            <Route path="manutencoes" element={<ManutencoesPage />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="moradores" element={<RoleRoute allowedRoles={['admin']}><MoradoresPage /></RoleRoute>} />
+            <Route path="quotas" element={<RoleRoute allowedRoles={['admin', 'morador']}><QuotasPage /></RoleRoute>} />
+            <Route path="ocorrencias" element={<RoleRoute allowedRoles={['admin', 'morador']}><OcorrenciasPage /></RoleRoute>} />
+            <Route path="comunicados" element={<RoleRoute allowedRoles={['admin', 'morador', 'funcionario']}><ComunicadosPage /></RoleRoute>} />
+            <Route path="documentos" element={<RoleRoute allowedRoles={['admin', 'morador']}><DocumentosPage /></RoleRoute>} />
+            <Route path="contabilidade" element={<RoleRoute allowedRoles={['admin', 'morador']}><ContabilidadePage /></RoleRoute>} />
+            <Route path="manutencoes" element={<RoleRoute allowedRoles={['admin', 'morador']}><ManutencoesPage /></RoleRoute>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
