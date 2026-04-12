@@ -5,7 +5,6 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { RoleRoute } from '@/components/auth/RoleRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { MoradoresPage } from '@/pages/MoradoresPage'
 import { QuotasPage } from '@/pages/QuotasPage'
@@ -22,7 +21,6 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
           <Route
             path="/"
             element={
