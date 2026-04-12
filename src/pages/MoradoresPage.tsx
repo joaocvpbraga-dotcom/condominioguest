@@ -192,7 +192,9 @@ export function MoradoresPage() {
   }
 
   useEffect(() => {
-    if (tab === 'utilizadores') fetchUtilizadores()
+    if (tab === 'utilizadores' || tab === 'moradores') {
+      fetchUtilizadores()
+    }
   }, [tab])
 
   const [search, setSearch] = useState('')
