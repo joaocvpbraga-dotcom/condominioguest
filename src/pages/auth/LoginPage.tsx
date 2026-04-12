@@ -84,10 +84,7 @@ export function LoginPage() {
           )}
 
           <p className="mt-4 text-center text-sm text-slate-500">
-            Não tem conta?{' '}
-            <Link to="/register" className="text-blue-600 hover:underline font-medium">
-              Criar conta
-            </Link>
+            (Conta criada apenas por administrador)
           </p>
         </div>
       </div>
