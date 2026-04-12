@@ -4,7 +4,7 @@ import { Card, CardBody } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import {
   Users, CreditCard, AlertTriangle,
   TrendingUp, TrendingDown, Clock, ArrowRight,
@@ -31,6 +31,12 @@ export function DashboardPage() {
   const today = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const isAdmin = profile?.role === 'admin'
   const isInquilino = profile?.role === 'funcionario'
+  const precisaFracao = profile?.role === 'morador' || profile?.role === 'funcionario'
+  const temFracaoAssociada = !!profile?.id && fracoes.some(f => f.proprietario_id === profile.id)
+
+  if (precisaFracao && !temFracaoAssociada) {
+    return <Navigate to="/comunicados" replace />
+  }
 
   const now = new Date()
   const mesAtual = now.getMonth() + 1
