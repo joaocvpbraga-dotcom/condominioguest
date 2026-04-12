@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Building2 } from 'lucide-react'
 
 export function RegisterPage() {
-  const { signUp, user, loading } = useAuth()
+  const { signUp, user, loading, profile } = useAuth()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -14,7 +14,14 @@ export function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && user) return <Navigate to="/" replace />
+  // Apenas admin logado pode criar utilizadores
+  if (!loading && (!user || profile?.role !== 'admin')) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!loading && user && profile?.role === 'admin') {
+    // Admin logado pode criar conta - continuar
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
