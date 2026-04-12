@@ -46,6 +46,7 @@ export function MoradoresPage() {
   // Moradores & Frações — persisted in AppDataContext
   const { moradores, setMoradores, fracoes, setFracoes, permissoes, setPermissoes } = useAppData()
   const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
 
   // Utilizadores registados no Supabase
   const [utilizadores, setUtilizadores] = useState<Profile[]>([])
@@ -69,6 +70,10 @@ export function MoradoresPage() {
   async function handleNovoUtilizador(e: React.FormEvent) {
     e.preventDefault()
     if (!novoUserForm.nome || !novoUserForm.email || !novoUserForm.senha) return
+    if (novoUserForm.role === 'funcionario' && !isAdmin) {
+      alert('Apenas administradores podem criar login de inquilino.')
+      return
+    }
     setSavingNovoUser(true)
 
     if (isSupabaseConfigured) {
@@ -180,6 +185,10 @@ export function MoradoresPage() {
   async function handleMoradorSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!formMorador.nome || !formMorador.email) return
+    if (formMorador.role === 'funcionario' && !isAdmin) {
+      alert('Apenas administradores podem criar login de inquilino.')
+      return
+    }
     const moradorId = editMorador ? editMorador.id : crypto.randomUUID()
     const moradorData: Profile = editMorador
       ? { ...editMorador, nome: formMorador.nome, email: formMorador.email, telefone: formMorador.telefone || undefined, role: formMorador.role as Profile['role'] }
@@ -665,7 +674,7 @@ export function MoradoresPage() {
             options={[
               { value: 'morador', label: 'Proprietário' },
               { value: 'admin', label: 'Administrador' },
-              { value: 'funcionario', label: 'Inquilino' },
+              ...(isAdmin ? [{ value: 'funcionario', label: 'Inquilino' }] : []),
             ]}
           />
           <div className="flex gap-2 justify-end pt-1">
@@ -696,7 +705,16 @@ export function MoradoresPage() {
               placeholder="Mínimo 6 caracteres"
             />
           )}
-          <Select label="Perfil" value={formMorador.role} onChange={e => setFormMorador({ ...formMorador, role: e.target.value })} options={[{ value: 'morador', label: 'Proprietário' }, { value: 'admin', label: 'Administrador' }, { value: 'funcionario', label: 'Inquilino' }]} />
+          <Select
+            label="Perfil"
+            value={formMorador.role}
+            onChange={e => setFormMorador({ ...formMorador, role: e.target.value })}
+            options={[
+              { value: 'morador', label: 'Proprietário' },
+              { value: 'admin', label: 'Administrador' },
+              ...(isAdmin ? [{ value: 'funcionario', label: 'Inquilino' }] : []),
+            ]}
+          />
           {editMorador && (
             <Select
               label="Fração associada"
