@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { criarUtilizador, eliminarUtilizador, atualizarRole } from '@/lib/adminFunctions'
 
+
 const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', funcionario: 'Inquilino' }
 const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
 
@@ -69,6 +70,10 @@ export function MoradoresPage() {
 
   async function handleNovoUtilizador(e: React.FormEvent) {
     e.preventDefault()
+    if (!isAdmin) {
+      alert('Apenas administradores podem criar utilizadores.')
+      return
+    }
     if (!novoUserForm.nome || !novoUserForm.email || !novoUserForm.senha) return
     if (novoUserForm.role === 'funcionario' && !isAdmin) {
       alert('Apenas administradores podem criar login de inquilino.')
@@ -500,9 +505,11 @@ export function MoradoresPage() {
               <Button size="sm" variant="outline" onClick={fetchUtilizadores} disabled={loadingUsers}>
                 <RefreshCw size={14} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar
               </Button>
-              <Button size="sm" onClick={() => setOpenNovoUser(true)}>
-                <Plus size={14} /> Novo Utilizador
-              </Button>
+              {isAdmin && (
+                <Button size="sm" onClick={() => setOpenNovoUser(true)}>
+                  <Plus size={14} /> Novo Utilizador
+                </Button>
+              )}
             </div>
           </div>
           {utilizadores.length === 0 ? (
