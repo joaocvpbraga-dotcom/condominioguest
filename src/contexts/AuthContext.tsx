@@ -78,12 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUp(email: string, password: string, nome: string) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { nome } },
-    })
-    if (error) throw error
+    void email
+    void password
+    void nome
+    throw new Error('Criacao de conta desativada. Apenas administradores podem criar logins pelo painel.')
   }
 
   async function signOut() {
