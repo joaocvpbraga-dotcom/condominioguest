@@ -31,7 +31,9 @@ const moradorNavItems = [
 
 const inquilinoNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/ocorrencias', icon: AlertTriangle, label: 'Ocorrências', end: false },
   { to: '/comunicados', icon: Megaphone, label: 'Comunicados', end: false },
+  { to: '/manutencoes', icon: Wrench, label: 'Manutenções', end: false },
 ]
 
 export function Sidebar() {
