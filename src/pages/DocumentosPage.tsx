@@ -94,6 +94,7 @@ export function DocumentosPage() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const isOwner = profile?.role === 'morador'
+  const destinatariosAlerta = moradores.filter(m => m.role !== 'admin')
 
   const [catFilter, setCatFilter] = useState('todos')
   const [openModal, setOpenModal] = useState(false)
@@ -379,8 +380,8 @@ export function DocumentosPage() {
             value={alertDest}
             onChange={e => setAlertDest(e.target.value)}
             options={[
-              { value: '', label: 'Todos os moradores' },
-              ...moradores.map(m => ({ value: m.id, label: m.nome })),
+              { value: '', label: 'Todos os moradores e inquilinos' },
+              ...destinatariosAlerta.map(m => ({ value: m.id, label: m.nome })),
             ]}
           />
           <div className="flex gap-2 justify-end pt-2">

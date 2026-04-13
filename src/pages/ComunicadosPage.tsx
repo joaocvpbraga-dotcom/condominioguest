@@ -15,6 +15,7 @@ export function ComunicadosPage() {
   const { comunicados, setComunicados, moradores } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const destinatarios = moradores.filter(m => m.role !== 'admin')
 
   const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
@@ -29,7 +30,7 @@ export function ComunicadosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Comunicados</h1>
-          <p className="text-slate-500 mt-1">Avisos e informações para os moradores</p>
+          <p className="text-slate-500 mt-1">Avisos e informações para moradores e inquilinos</p>
         </div>
         {isAdmin && (
           <Button onClick={() => setOpenModal(true)}>
@@ -107,8 +108,8 @@ export function ComunicadosPage() {
             value={form.destinatario_id}
             onChange={e => setForm({ ...form, destinatario_id: e.target.value })}
             options={[
-              { value: '', label: 'Todos os moradores' },
-              ...moradores.map(m => ({ value: m.id, label: m.nome })),
+              { value: '', label: 'Todos os moradores e inquilinos' },
+              ...destinatarios.map(m => ({ value: m.id, label: m.nome })),
             ]}
           />
           <Textarea label="Conteúdo" value={form.conteudo} onChange={e => setForm({ ...form, conteudo: e.target.value })} rows={6} placeholder="Escreva o comunicado..." required />
