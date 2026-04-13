@@ -177,17 +177,71 @@ export function OcorrenciasPage() {
       created_at: new Date().toISOString(),
       interna: true,
     }
-    const updated = { ...o, estado: novoEstado, notas: [...o.notas, nota] }
+    let updated = { ...o, estado: novoEstado, notas: [...o.notas, nota] }
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('ocorrencias').update({ estado: novoEstado }).eq('id', o.id)
-      if (error) {
-        console.error('Erro ao atualizar estado da ocorrência:', error)
-        return
+      const hasUuidId = UUID_RE.test(o.id)
+
+      if (hasUuidId) {
+        const { data, error } = await supabase
+          .from('ocorrencias')
+          .update({ estado: novoEstado })
+          .eq('id', o.id)
+          .select('id')
+          .maybeSingle()
+
+        if (error) {
+          console.error('Erro ao atualizar estado da ocorrência:', error)
+          return
+        }
+
+        // Se não encontrou a ocorrência por id, cria no Supabase para sincronizar.
+        if (!data) {
+          const { error: insertError } = await supabase.from('ocorrencias').insert({
+            id: o.id,
+            condominio_id: o.condominio_id,
+            titulo: o.titulo,
+            descricao: o.descricao,
+            tipo: o.tipo,
+            estado: novoEstado,
+            prioridade: o.prioridade,
+            autor_id: o.autor_id,
+            created_at: o.created_at,
+          })
+          if (insertError) {
+            console.error('Erro ao sincronizar ocorrência no Supabase:', insertError)
+            return
+          }
+        }
+      } else {
+        // Migração automática de ocorrência local antiga para o Supabase.
+        const migratedId = crypto.randomUUID()
+        const { error: insertError } = await supabase.from('ocorrencias').insert({
+          id: migratedId,
+          condominio_id: o.condominio_id,
+          titulo: o.titulo,
+          descricao: o.descricao,
+          tipo: o.tipo,
+          estado: novoEstado,
+          prioridade: o.prioridade,
+          autor_id: o.autor_id,
+          created_at: o.created_at,
+        })
+        if (insertError) {
+          console.error('Erro ao migrar ocorrência local para Supabase:', insertError)
+          return
+        }
+        updated = { ...updated, id: migratedId }
       }
     }
 
-    updateOcorrencia(updated)
+    if (updated.id === o.id) {
+      updateOcorrencia(updated)
+    } else {
+      setOcorrencias(prev => prev.map(x => x.id === o.id ? updated : x))
+      setSelected(updated)
+      if (detailOcorrencia?.id === o.id) setDetailOcorrencia(updated)
+    }
 
     // Feedback direto ao autor quando o estado muda (visível em Comunicados)
     const feedback: Comunicado = {
