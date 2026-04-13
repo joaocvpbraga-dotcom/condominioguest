@@ -94,6 +94,7 @@ export function DocumentosPage() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const isOwner = profile?.role === 'morador'
+  const roleLabel = (role: string) => role === 'funcionario' ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatariosAlerta = moradores.filter(m => m.role !== 'admin')
 
   const [catFilter, setCatFilter] = useState('todos')
@@ -102,6 +103,7 @@ export function DocumentosPage() {
   const [openAlertModal, setOpenAlertModal] = useState(false)
   const [alertDoc, setAlertDoc] = useState<Documento | null>(null)
   const [alertDest, setAlertDest] = useState('')
+  const [alertMode, setAlertMode] = useState<'geral' | 'individual'>('geral')
   const [form, setForm] = useState({
     nome: '', descricao: '', categoria: isAdmin ? 'ata' : 'comprovativo',
     data_validade: '', periodo: 'mensal' as Documento['periodo'], fracao_id: '',
@@ -119,7 +121,11 @@ export function DocumentosPage() {
 
   function enviarAlerta() {
     if (!alertDoc) return
-    const destinatario = alertDest || undefined
+    if (alertMode === 'individual' && !alertDest) {
+      alert('Selecione um destinatário para alerta individual.')
+      return
+    }
+    const destinatario = alertMode === 'individual' ? alertDest : undefined
     const days = daysUntil(alertDoc.data_validade!)
     const comunicado: Comunicado = {
       id: `c-${Date.now()}`,
@@ -148,6 +154,7 @@ export function DocumentosPage() {
     setComunicados(prev => [comunicado, ...prev])
     setOpenAlertModal(false)
     setAlertDoc(null)
+    setAlertMode('geral')
     setAlertDest('')
     alert('Alerta enviado com sucesso!')
   }
@@ -376,13 +383,27 @@ export function DocumentosPage() {
             </div>
           )}
           <Select
+            label="Tipo de alerta"
+            value={alertMode}
+            onChange={e => {
+              const next = e.target.value as 'geral' | 'individual'
+              setAlertMode(next)
+              if (next === 'geral') setAlertDest('')
+            }}
+            options={[
+              { value: 'geral', label: 'Alerta geral (todos)' },
+              { value: 'individual', label: 'Alerta individual' },
+            ]}
+          />
+          <Select
             label="Enviar para"
             value={alertDest}
             onChange={e => setAlertDest(e.target.value)}
             options={[
-              { value: '', label: 'Todos os moradores e inquilinos' },
-              ...destinatariosAlerta.map(m => ({ value: m.id, label: m.nome })),
+              { value: '', label: 'Selecionar destinatário...' },
+              ...destinatariosAlerta.map(m => ({ value: m.id, label: `${m.nome} (${roleLabel(m.role)})` })),
             ]}
+            disabled={alertMode !== 'individual'}
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => setOpenAlertModal(false)}>Cancelar</Button>

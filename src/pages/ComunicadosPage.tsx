@@ -15,16 +15,19 @@ export function ComunicadosPage() {
   const { comunicados, setComunicados, moradores } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const roleLabel = (role: string) => role === 'funcionario' ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatarios = moradores.filter(m => m.role !== 'admin')
 
   const [openModal, setOpenModal] = useState(false)
   const [editingComunicado, setEditingComunicado] = useState<Comunicado | null>(null)
+  const [modoEnvio, setModoEnvio] = useState<'geral' | 'individual'>('geral')
   const [form, setForm] = useState({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
 
   const canEditComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
 
   function openNovoComunicado() {
     setEditingComunicado(null)
+    setModoEnvio('geral')
     setForm({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
     setOpenModal(true)
   }
@@ -32,6 +35,7 @@ export function ComunicadosPage() {
   function openEditarComunicado(c: Comunicado) {
     if (!canEditComunicado(c)) return
     setEditingComunicado(c)
+    setModoEnvio(c.destinatario_id ? 'individual' : 'geral')
     setForm({
       titulo: c.titulo,
       conteudo: c.conteudo,
@@ -44,6 +48,12 @@ export function ComunicadosPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.titulo || !form.conteudo) return
+    if (modoEnvio === 'individual' && !form.destinatario_id) {
+      alert('Selecione um destinatário para alerta individual.')
+      return
+    }
+
+    const destinatarioId = modoEnvio === 'individual' ? form.destinatario_id : ''
 
     if (editingComunicado) {
       const atualizado: Comunicado = {
@@ -51,7 +61,7 @@ export function ComunicadosPage() {
         titulo: form.titulo,
         conteudo: form.conteudo,
         importante: form.importante,
-        destinatario_id: form.destinatario_id || undefined,
+        destinatario_id: destinatarioId || undefined,
       }
 
       if (isSupabaseConfigured) {
@@ -72,7 +82,7 @@ export function ComunicadosPage() {
         titulo: form.titulo,
         conteudo: form.conteudo,
         importante: form.importante,
-        destinatario_id: form.destinatario_id || undefined,
+        destinatario_id: destinatarioId || undefined,
         autor_id: profile?.id ?? 'demo',
         created_at: new Date().toISOString(),
       }
@@ -94,6 +104,7 @@ export function ComunicadosPage() {
 
     setOpenModal(false)
     setEditingComunicado(null)
+    setModoEnvio('geral')
     setForm({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
   }
 
@@ -134,7 +145,7 @@ export function ComunicadosPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-slate-800">{c.titulo}</h3>
                           {c.importante && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">Importante</span>}
-                          {destinatario && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">Para: {destinatario.nome}</span>}
+                          {destinatario && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">Para: {destinatario.nome} ({roleLabel(destinatario.role)})</span>}
                         </div>
                         <p className="text-sm text-slate-600 mt-2 leading-relaxed">{c.conteudo}</p>
                         <p className="text-xs text-slate-400 mt-3">{formatDateTime(c.created_at)}</p>
@@ -162,13 +173,27 @@ export function ComunicadosPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Input label="Título" value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} placeholder="Título do comunicado" required />
           <Select
+            label="Tipo de alerta"
+            value={modoEnvio}
+            onChange={e => {
+              const next = e.target.value as 'geral' | 'individual'
+              setModoEnvio(next)
+              if (next === 'geral') setForm(prev => ({ ...prev, destinatario_id: '' }))
+            }}
+            options={[
+              { value: 'geral', label: 'Alerta geral (todos)' },
+              { value: 'individual', label: 'Alerta individual' },
+            ]}
+          />
+          <Select
             label="Destinatário"
             value={form.destinatario_id}
             onChange={e => setForm({ ...form, destinatario_id: e.target.value })}
             options={[
-              { value: '', label: 'Todos os moradores e inquilinos' },
-              ...destinatarios.map(m => ({ value: m.id, label: m.nome })),
+              { value: '', label: 'Selecionar destinatário...' },
+              ...destinatarios.map(m => ({ value: m.id, label: `${m.nome} (${roleLabel(m.role)})` })),
             ]}
+            disabled={modoEnvio !== 'individual'}
           />
           <Textarea label="Conteúdo" value={form.conteudo} onChange={e => setForm({ ...form, conteudo: e.target.value })} rows={6} placeholder="Escreva o comunicado..." required />
           <label className="flex items-center gap-2 cursor-pointer">
