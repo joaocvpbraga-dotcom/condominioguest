@@ -25,7 +25,10 @@ export function ComunicadosPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const canEditComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
-  const canDeleteComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
+  const canDeleteComunicado = (c: Comunicado) => {
+    if (c.importante) return isAdmin
+    return isAdmin || c.autor_id === profile?.id
+  }
 
   async function handleDeleteComunicado(c: Comunicado) {
     if (!canDeleteComunicado(c)) return
