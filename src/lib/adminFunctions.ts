@@ -4,13 +4,13 @@ export async function criarUtilizador({ email, password, nome, role }: {
   email: string
   password: string
   nome: string
-  role?: 'admin' | 'morador' | 'funcionario'
+  role?: 'admin' | 'morador' | 'inquilino'
 }) {
   const { data, error } = await callAdminFunction<{
     id: string
     nome: string
     email: string
-    role: 'admin' | 'morador' | 'funcionario'
+    role: 'admin' | 'morador' | 'inquilino'
     condominio_id?: string
   }>('create-user', { email, password, nome, role })
   if (error || !data) throw new Error(error || 'Erro ao criar utilizador')

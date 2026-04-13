@@ -30,8 +30,9 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const isAdmin = profile?.role === 'admin'
-  const isInquilino = profile?.role === 'funcionario'
-  const precisaFracao = profile?.role === 'morador' || profile?.role === 'funcionario'
+  const roleValue = profile?.role as string | undefined
+  const isInquilino = roleValue === 'inquilino' || roleValue === 'funcionario'
+  const precisaFracao = profile?.role === 'morador' || isInquilino
   const temFracaoAssociada = !!profile?.id && fracoes.some(f => f.proprietario_id === profile.id)
 
   if (precisaFracao && !temFracaoAssociada) {

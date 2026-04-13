@@ -32,11 +32,11 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="moradores" element={<RoleRoute allowedRoles={['admin']}><MoradoresPage /></RoleRoute>} />
             <Route path="quotas" element={<RoleRoute allowedRoles={['admin', 'morador']}><QuotasPage /></RoleRoute>} />
-            <Route path="ocorrencias" element={<RoleRoute allowedRoles={['admin', 'morador', 'funcionario']}><OcorrenciasPage /></RoleRoute>} />
-            <Route path="comunicados" element={<RoleRoute allowedRoles={['admin', 'morador', 'funcionario']}><ComunicadosPage /></RoleRoute>} />
+            <Route path="ocorrencias" element={<RoleRoute allowedRoles={['admin', 'morador', 'inquilino']}><OcorrenciasPage /></RoleRoute>} />
+            <Route path="comunicados" element={<RoleRoute allowedRoles={['admin', 'morador', 'inquilino']}><ComunicadosPage /></RoleRoute>} />
             <Route path="documentos" element={<RoleRoute allowedRoles={['admin', 'morador']}><DocumentosPage /></RoleRoute>} />
             <Route path="contabilidade" element={<RoleRoute allowedRoles={['admin', 'morador']}><ContabilidadePage /></RoleRoute>} />
-            <Route path="manutencoes" element={<RoleRoute allowedRoles={['admin', 'morador', 'funcionario']}><ManutencoesPage /></RoleRoute>} />
+            <Route path="manutencoes" element={<RoleRoute allowedRoles={['admin', 'morador', 'inquilino']}><ManutencoesPage /></RoleRoute>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

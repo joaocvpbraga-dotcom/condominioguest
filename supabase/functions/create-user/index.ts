@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     if (callerProfile?.role !== 'admin') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: corsHeaders })
 
     const { email, password, nome, role } = await req.json()
+    const normalizedRole = role === 'funcionario' ? 'inquilino' : role
     if (!email || !password || !nome) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders })
 
     // Criar utilizador no Auth
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
       id: userId,
       nome,
       email,
-      role: role ?? 'morador',
+      role: normalizedRole ?? 'morador',
       condominio_id: callerProfile.condominio_id,
       created_at: new Date().toISOString(),
     })
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: profileErr.message }), { status: 400, headers: corsHeaders })
     }
 
-    return new Response(JSON.stringify({ id: userId, nome, email, role: role ?? 'morador', condominio_id: callerProfile.condominio_id }), {
+    return new Response(JSON.stringify({ id: userId, nome, email, role: normalizedRole ?? 'morador', condominio_id: callerProfile.condominio_id }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

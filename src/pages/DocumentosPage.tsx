@@ -94,7 +94,7 @@ export function DocumentosPage() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const isOwner = profile?.role === 'morador'
-  const roleLabel = (role: string) => role === 'funcionario' ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
+  const roleLabel = (role: string) => (role === 'inquilino' || role === 'funcionario') ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatariosAlerta = moradores.filter(m => m.role !== 'admin')
 
   const [catFilter, setCatFilter] = useState('todos')

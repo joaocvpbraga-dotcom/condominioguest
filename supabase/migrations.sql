@@ -37,6 +37,12 @@ alter table ocorrencias drop constraint if exists ocorrencias_estado_check;
 alter table ocorrencias add constraint ocorrencias_estado_check
   check (estado in ('aberta', 'aceite', 'em_analise', 'resolvida', 'fechada'));
 
+-- perfis: migrar role legado funcionario -> inquilino
+update profiles set role = 'inquilino' where role = 'funcionario';
+alter table profiles drop constraint if exists profiles_role_check;
+alter table profiles add constraint profiles_role_check
+  check (role in ('admin', 'morador', 'inquilino'));
+
 -- ── 4. NOVAS TABELAS ─────────────────────────────────────────
 
 -- OBRAS

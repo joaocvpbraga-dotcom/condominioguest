@@ -14,8 +14,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { criarUtilizador, eliminarUtilizador, atualizarRole } from '@/lib/adminFunctions'
 
 
-const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', funcionario: 'Inquilino' }
-const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', funcionario: 'default' }
+const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', inquilino: 'Inquilino', funcionario: 'Inquilino' }
+const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', inquilino: 'default', funcionario: 'default' }
 
 const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '', senha: '' }
 const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
@@ -106,7 +106,7 @@ export function MoradoresPage() {
       return
     }
 
-    if (novoUserForm.role === 'funcionario' && !isAdmin) {
+    if (novoUserForm.role === 'inquilino' && !isAdmin) {
       alert('Apenas administradores podem criar login de inquilino.')
       return
     }
@@ -219,7 +219,7 @@ export function MoradoresPage() {
   async function handleMoradorSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!formMorador.nome || !formMorador.email) return
-    if (formMorador.role === 'funcionario' && !isAdmin) {
+    if (formMorador.role === 'inquilino' && !isAdmin) {
       alert('Apenas administradores podem criar login de inquilino.')
       return
     }
@@ -597,7 +597,7 @@ export function MoradoresPage() {
                               >
                                 <option value="morador">Proprietário</option>
                                 <option value="admin">Administrador</option>
-                                <option value="funcionario">Inquilino</option>
+                                <option value="inquilino">Inquilino</option>
                               </select>
                               {pendingRoles[u.id] && (
                                 <button
@@ -712,7 +712,7 @@ export function MoradoresPage() {
             options={[
               { value: 'morador', label: 'Proprietário' },
               { value: 'admin', label: 'Administrador' },
-              ...(isAdmin ? [{ value: 'funcionario', label: 'Inquilino' }] : []),
+              ...(isAdmin ? [{ value: 'inquilino', label: 'Inquilino' }] : []),
             ]}
           />
           <div className="flex gap-2 justify-end pt-1">
@@ -750,7 +750,7 @@ export function MoradoresPage() {
             options={[
               { value: 'morador', label: 'Proprietário' },
               { value: 'admin', label: 'Administrador' },
-              ...(isAdmin ? [{ value: 'funcionario', label: 'Inquilino' }] : []),
+              ...(isAdmin ? [{ value: 'inquilino', label: 'Inquilino' }] : []),
             ]}
           />
           {editMorador && (

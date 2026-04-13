@@ -26,8 +26,9 @@ Deno.serve(async (req) => {
     if (callerProfile?.role !== 'admin') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: corsHeaders })
 
     const { userId, role } = await req.json()
-    if (!userId || !role) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders })
-    if (!['admin', 'morador', 'funcionario'].includes(role)) {
+    const normalizedRole = role === 'funcionario' ? 'inquilino' : role
+    if (!userId || !normalizedRole) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders })
+    if (!['admin', 'morador', 'inquilino'].includes(normalizedRole)) {
       return new Response(JSON.stringify({ error: 'Invalid role' }), { status: 400, headers: corsHeaders })
     }
 
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: corsHeaders })
     }
 
-    const { error: updateErr } = await adminClient.from('profiles').update({ role }).eq('id', userId)
+    const { error: updateErr } = await adminClient.from('profiles').update({ role: normalizedRole }).eq('id', userId)
     if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: corsHeaders })
 
     return new Response(JSON.stringify({ success: true }), {

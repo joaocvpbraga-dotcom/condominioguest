@@ -34,7 +34,7 @@ create table profiles (
   email          text not null,
   telefone       text,
   role           text not null default 'morador'
-                   check (role in ('admin', 'morador', 'funcionario')),
+                   check (role in ('admin', 'morador', 'inquilino')),
   condominio_id  uuid references condominios(id),
   created_at     timestamptz default now()
 );

@@ -39,11 +39,13 @@ const inquilinoNavItems = [
 export function Sidebar() {
   const { profile, signOut } = useAuth()
   const [open, setOpen] = useState(false)
-  const roleLabel = profile?.role === 'admin' ? 'Administrador' : profile?.role === 'funcionario' ? 'Inquilino' : profile?.role === 'morador' ? 'Proprietário' : ''
+  const roleValue = profile?.role as string | undefined
+  const isInquilino = roleValue === 'inquilino' || roleValue === 'funcionario'
+  const roleLabel = profile?.role === 'admin' ? 'Administrador' : isInquilino ? 'Inquilino' : profile?.role === 'morador' ? 'Proprietário' : ''
 
   const navItems = profile?.role === 'admin'
     ? adminNavItems
-    : profile?.role === 'funcionario'
+    : isInquilino
       ? inquilinoNavItems
       : moradorNavItems
 
