@@ -22,6 +22,7 @@ export function ComunicadosPage() {
   const [editingComunicado, setEditingComunicado] = useState<Comunicado | null>(null)
   const [modoEnvio, setModoEnvio] = useState<'geral' | 'individual'>('geral')
   const [form, setForm] = useState({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const canEditComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
   const canDeleteComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
@@ -39,6 +40,23 @@ export function ComunicadosPage() {
     }
 
     setComunicados(prev => prev.filter(x => x.id !== c.id))
+    setSelectedIds(prev => prev.filter(id => id !== c.id))
+  }
+
+  async function handleDeleteSelecionados() {
+    if (selectedIds.length === 0) return
+    if (!window.confirm(`Eliminar ${selectedIds.length} comunicados selecionados?`)) return
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('comunicados').delete().in('id', selectedIds)
+      if (error) {
+        console.error('Erro ao eliminar comunicados selecionados:', error)
+        return
+      }
+    }
+
+    setComunicados(prev => prev.filter(c => !selectedIds.includes(c.id)))
+    setSelectedIds([])
   }
 
   function openNovoComunicado() {
@@ -128,6 +146,20 @@ export function ComunicadosPage() {
   const visibleComunicados = isAdmin
     ? comunicados
     : comunicados.filter(c => !c.destinatario_id || c.destinatario_id === profile?.id)
+  const deletableIds = visibleComunicados.filter(canDeleteComunicado).map(c => c.id)
+  const allSelected = deletableIds.length > 0 && deletableIds.every(id => selectedIds.includes(id))
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !deletableIds.includes(id)))
+      return
+    }
+    setSelectedIds(prev => Array.from(new Set([...prev, ...deletableIds])))
+  }
 
   return (
     <div className="p-4 md:p-8">
@@ -143,6 +175,22 @@ export function ComunicadosPage() {
         )}
       </div>
 
+      {deletableIds.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <Button variant="outline" type="button" onClick={toggleSelectAll}>
+            {allSelected ? 'Desselecionar todos' : 'Selecionar todos'}
+          </Button>
+          {selectedIds.length > 0 && (
+            <>
+              <Button variant="outline" type="button" onClick={() => setSelectedIds([])}>Limpar seleção</Button>
+              <Button type="button" onClick={handleDeleteSelecionados}>
+                <Trash2 size={15} /> Eliminar selecionados ({selectedIds.length})
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
       {visibleComunicados.length === 0 ? (
         <EmptyState icon={<Megaphone size={48} />} title="Sem comunicados" description={isAdmin ? 'Publique o primeiro comunicado.' : 'Sem comunicados por enquanto.'} action={isAdmin ? <Button onClick={openNovoComunicado}><Plus size={16} /> Publicar</Button> : undefined} />
       ) : (
@@ -154,6 +202,17 @@ export function ComunicadosPage() {
                 <CardBody>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {canDeleteComunicado(c) && (
+                        <label className="mt-2 shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(c.id)}
+                            onChange={() => toggleSelect(c.id)}
+                            className="w-4 h-4 rounded border-slate-300 text-red-600"
+                            aria-label="Selecionar comunicado"
+                          />
+                        </label>
+                      )}
                       <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${c.importante ? 'bg-red-100' : 'bg-slate-100'}`}>
                         {destinatario ? <User size={16} className="text-orange-500" /> : c.importante ? <Pin size={16} className="text-red-600" /> : <Megaphone size={16} className="text-slate-500" />}
                       </div>
