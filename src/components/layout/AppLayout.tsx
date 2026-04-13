@@ -34,7 +34,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-auto">
+      <div className="flex-1 flex flex-col overflow-auto pt-14 md:pt-0">
         {alertaOcorrenciaGrave && (
           <div
             className="flex items-center gap-3 px-4 py-2.5 bg-red-700 text-white text-sm cursor-pointer hover:bg-red-800 transition-colors"
@@ -83,7 +83,7 @@ export function AppLayout() {
             Ver mais {alertas.length - topAlertas.length} alertas importantes
           </button>
         )}
-        <main className="flex-1 pt-14 md:pt-0">
+        <main className="flex-1">
           <Outlet />
         </main>
       </div>

@@ -505,9 +505,16 @@ export function OcorrenciasPage() {
         </div>
       </div>
 
-      {/* ── Painel lateral ── */}
+      {/* ── Painel lateral / drawer responsivo ── */}
       {selected && (
-        <div className="hidden xl:flex flex-col w-[45%] min-w-80 border-l border-slate-200 bg-white">
+        <>
+          <button
+            type="button"
+            className="xl:hidden fixed inset-0 z-40 bg-black/40"
+            onClick={() => setSelected(null)}
+            aria-label="Fechar detalhe da ocorrência"
+          />
+          <div className="fixed inset-y-0 right-0 z-50 flex w-full sm:w-[560px] flex-col border-l border-slate-200 bg-white xl:static xl:z-auto xl:flex xl:w-[45%] xl:min-w-80">
           <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between">
             <div className="flex-1 pr-4">
               <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Ocorrência #{selected.id}</p>
@@ -650,7 +657,8 @@ export function OcorrenciasPage() {
             </div>
             <p className="text-xs text-slate-400 mt-1">Ctrl+Enter para enviar</p>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* ── Modal: Detalhe Morador ── */}
