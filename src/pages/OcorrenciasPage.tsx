@@ -38,6 +38,8 @@ const estadoVariant: Record<string, 'warning' | 'info' | 'success' | 'default'> 
   aberta: 'warning', aceite: 'default', em_analise: 'info', resolvida: 'success', fechada: 'default',
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export function OcorrenciasPage() {
   const { ocorrencias, setOcorrencias, setComunicados } = useAppData()
   const { profile } = useAuth()
@@ -71,7 +73,8 @@ export function OcorrenciasPage() {
     if (!canDeleteOcorrencia(o)) return
     if (!window.confirm(`Eliminar ocorrência "${o.titulo}"?`)) return
 
-    if (isSupabaseConfigured) {
+    const hasUuidId = UUID_RE.test(o.id)
+    if (isSupabaseConfigured && hasUuidId) {
       const { error } = await supabase.from('ocorrencias').delete().eq('id', o.id)
       if (error) {
         console.error('Erro ao eliminar ocorrência:', error)
@@ -169,7 +172,8 @@ export function OcorrenciasPage() {
         prioridade: form.prioridade as Ocorrencia['prioridade'],
       }
 
-      if (isSupabaseConfigured) {
+      const hasUuidId = UUID_RE.test(atualizada.id)
+      if (isSupabaseConfigured && hasUuidId) {
         const { error } = await supabase.from('ocorrencias').update({
           titulo: atualizada.titulo,
           descricao: atualizada.descricao,
@@ -190,7 +194,7 @@ export function OcorrenciasPage() {
     }
 
     const nova: OcorrenciaComNotas = {
-      id: `o-${Date.now()}`,
+      id: crypto.randomUUID(),
       condominio_id: profile?.condominio_id ?? 'c1',
       titulo: form.titulo,
       descricao: form.descricao,
@@ -202,6 +206,24 @@ export function OcorrenciasPage() {
       created_at: new Date().toISOString(),
       notas: [],
     }
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('ocorrencias').insert({
+        id: nova.id,
+        condominio_id: nova.condominio_id,
+        titulo: nova.titulo,
+        descricao: nova.descricao,
+        tipo: nova.tipo,
+        estado: nova.estado,
+        prioridade: nova.prioridade,
+        autor_id: nova.autor_id,
+        created_at: nova.created_at,
+      })
+      if (error) {
+        console.error('Erro ao guardar ocorrência:', error)
+      }
+    }
+
     setOcorrencias(prev => [nova, ...prev])
 
     const isGrave = nova.tipo === 'risco' || nova.prioridade === 'alta' || nova.prioridade === 'urgente'
