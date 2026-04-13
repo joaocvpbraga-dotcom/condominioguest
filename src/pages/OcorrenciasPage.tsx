@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDateTime } from '@/lib/utils'
-import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send } from 'lucide-react'
+import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send, Pencil } from 'lucide-react'
 import type { Ocorrencia, Nota, OcorrenciaComNotas, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -53,6 +53,7 @@ export function OcorrenciasPage() {
   const [detailOcorrencia, setDetailOcorrencia] = useState<OcorrenciaComNotas | null>(null)
   const [moradorResposta, setMoradorResposta] = useState('')
   const [form, setForm] = useState({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
+  const [editingOcorrencia, setEditingOcorrencia] = useState<OcorrenciaComNotas | null>(null)
 
   // Moradores só veem as suas; admin vê todas
   const visibleOcorrencias = isAdmin
@@ -62,6 +63,26 @@ export function OcorrenciasPage() {
   const filtered = filter === 'todas'
     ? visibleOcorrencias
     : visibleOcorrencias.filter(o => o.estado === filter)
+
+  const canEditOcorrencia = (o: OcorrenciaComNotas) => isAdmin || o.autor_id === profile?.id
+
+  function openNovaOcorrencia() {
+    setEditingOcorrencia(null)
+    setForm({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
+    setOpenModal(true)
+  }
+
+  function openEditarOcorrencia(o: OcorrenciaComNotas) {
+    if (!canEditOcorrencia(o)) return
+    setEditingOcorrencia(o)
+    setForm({
+      titulo: o.titulo,
+      descricao: o.descricao,
+      tipo: o.tipo,
+      prioridade: o.prioridade,
+    })
+    setOpenModal(true)
+  }
 
   function openMoradorDetail(o: OcorrenciaComNotas) {
     setDetailOcorrencia(o)
@@ -118,6 +139,35 @@ export function OcorrenciasPage() {
   }
 
   async function criarOcorrencia() {
+    if (editingOcorrencia) {
+      const atualizada: OcorrenciaComNotas = {
+        ...editingOcorrencia,
+        titulo: form.titulo,
+        descricao: form.descricao,
+        tipo: form.tipo as Ocorrencia['tipo'],
+        prioridade: form.prioridade as Ocorrencia['prioridade'],
+      }
+
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('ocorrencias').update({
+          titulo: atualizada.titulo,
+          descricao: atualizada.descricao,
+          tipo: atualizada.tipo,
+          prioridade: atualizada.prioridade,
+        }).eq('id', atualizada.id)
+        if (error) { console.error('Erro ao atualizar ocorrência:', error); return }
+      }
+
+      setOcorrencias(prev => prev.map(o => o.id === atualizada.id ? atualizada : o))
+      if (selected?.id === atualizada.id) setSelected(atualizada)
+      if (detailOcorrencia?.id === atualizada.id) setDetailOcorrencia(atualizada)
+
+      setOpenModal(false)
+      setEditingOcorrencia(null)
+      setForm({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
+      return
+    }
+
     const nova: OcorrenciaComNotas = {
       id: `o-${Date.now()}`,
       condominio_id: profile?.condominio_id ?? 'c1',
@@ -164,6 +214,7 @@ export function OcorrenciasPage() {
     }
 
     setOpenModal(false)
+    setEditingOcorrencia(null)
     setForm({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
   }
 
@@ -178,7 +229,7 @@ export function OcorrenciasPage() {
             <h1 className="text-2xl font-bold text-slate-800">Ocorrências</h1>
             <p className="text-slate-500 mt-1 text-sm">Reclamações, avarias e sugestões</p>
           </div>
-          <Button onClick={() => setOpenModal(true)}>
+          <Button onClick={openNovaOcorrencia}>
             <Plus size={16} /> Nova Ocorrência
           </Button>
         </div>
@@ -247,6 +298,16 @@ export function OcorrenciasPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {canEditOcorrencia(o) && (
+                    <button
+                      title="Editar ocorrência"
+                      aria-label="Editar ocorrência"
+                      onClick={e => { e.stopPropagation(); openEditarOcorrencia(o) }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
                   <Badge variant={estadoVariant[o.estado]}>
                     {PIPELINE.find(p => p.estado === o.estado)?.label}
                   </Badge>
@@ -502,7 +563,7 @@ export function OcorrenciasPage() {
       )}
 
       {/* ── Modal: Nova Ocorrência ── */}
-      <Modal open={openModal} onClose={() => setOpenModal(false)} title="Nova Ocorrência">
+      <Modal open={openModal} onClose={() => setOpenModal(false)} title={editingOcorrencia ? 'Editar Ocorrência' : 'Nova Ocorrência'}>
         <form className="space-y-4" onSubmit={e => { e.preventDefault(); criarOcorrencia() }}>
           <Input
             label="Título"
@@ -546,7 +607,7 @@ export function OcorrenciasPage() {
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => setOpenModal(false)}>Cancelar</Button>
-            <Button type="submit">Submeter</Button>
+            <Button type="submit">{editingOcorrencia ? 'Guardar alterações' : 'Submeter'}</Button>
           </div>
         </form>
       </Modal>

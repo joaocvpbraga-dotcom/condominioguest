@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDateTime } from '@/lib/utils'
-import { Megaphone, Plus, Pin, User } from 'lucide-react'
+import { Megaphone, Plus, Pin, User, Pencil } from 'lucide-react'
 import type { Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,7 +18,84 @@ export function ComunicadosPage() {
   const destinatarios = moradores.filter(m => m.role !== 'admin')
 
   const [openModal, setOpenModal] = useState(false)
+  const [editingComunicado, setEditingComunicado] = useState<Comunicado | null>(null)
   const [form, setForm] = useState({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
+
+  const canEditComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
+
+  function openNovoComunicado() {
+    setEditingComunicado(null)
+    setForm({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
+    setOpenModal(true)
+  }
+
+  function openEditarComunicado(c: Comunicado) {
+    if (!canEditComunicado(c)) return
+    setEditingComunicado(c)
+    setForm({
+      titulo: c.titulo,
+      conteudo: c.conteudo,
+      importante: c.importante,
+      destinatario_id: c.destinatario_id ?? '',
+    })
+    setOpenModal(true)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.titulo || !form.conteudo) return
+
+    if (editingComunicado) {
+      const atualizado: Comunicado = {
+        ...editingComunicado,
+        titulo: form.titulo,
+        conteudo: form.conteudo,
+        importante: form.importante,
+        destinatario_id: form.destinatario_id || undefined,
+      }
+
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('comunicados').update({
+          titulo: atualizado.titulo,
+          conteudo: atualizado.conteudo,
+          importante: atualizado.importante,
+          destinatario_id: atualizado.destinatario_id ?? null,
+        }).eq('id', atualizado.id)
+        if (error) { console.error('Erro ao atualizar comunicado:', error); return }
+      }
+
+      setComunicados(prev => prev.map(c => c.id === atualizado.id ? atualizado : c))
+    } else {
+      const novo: Comunicado = {
+        id: `c-${Date.now()}`,
+        condominio_id: profile?.condominio_id ?? 'c1',
+        titulo: form.titulo,
+        conteudo: form.conteudo,
+        importante: form.importante,
+        destinatario_id: form.destinatario_id || undefined,
+        autor_id: profile?.id ?? 'demo',
+        created_at: new Date().toISOString(),
+      }
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('comunicados').insert({
+          id: novo.id,
+          condominio_id: novo.condominio_id,
+          titulo: novo.titulo,
+          conteudo: novo.conteudo,
+          importante: novo.importante,
+          destinatario_id: novo.destinatario_id ?? null,
+          autor_id: novo.autor_id,
+          created_at: novo.created_at,
+        })
+        if (error) { console.error('Erro ao guardar comunicado:', error); return }
+      }
+      setComunicados(prev => [novo, ...prev])
+    }
+
+    setOpenModal(false)
+    setEditingComunicado(null)
+    setForm({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
+  }
 
   // Moradores veem: comunicados gerais + os seus individuais
   const visibleComunicados = isAdmin
@@ -33,14 +110,14 @@ export function ComunicadosPage() {
           <p className="text-slate-500 mt-1">Avisos e informações para moradores e inquilinos</p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setOpenModal(true)}>
+          <Button onClick={openNovoComunicado}>
             <Plus size={16} /> Novo Comunicado
           </Button>
         )}
       </div>
 
       {visibleComunicados.length === 0 ? (
-        <EmptyState icon={<Megaphone size={48} />} title="Sem comunicados" description={isAdmin ? 'Publique o primeiro comunicado.' : 'Sem comunicados por enquanto.'} action={isAdmin ? <Button onClick={() => setOpenModal(true)}><Plus size={16} /> Publicar</Button> : undefined} />
+        <EmptyState icon={<Megaphone size={48} />} title="Sem comunicados" description={isAdmin ? 'Publique o primeiro comunicado.' : 'Sem comunicados por enquanto.'} action={isAdmin ? <Button onClick={openNovoComunicado}><Plus size={16} /> Publicar</Button> : undefined} />
       ) : (
         <div className="space-y-4">
           {visibleComunicados.map(c => {
@@ -63,6 +140,16 @@ export function ComunicadosPage() {
                         <p className="text-xs text-slate-400 mt-3">{formatDateTime(c.created_at)}</p>
                       </div>
                     </div>
+                    {canEditComunicado(c) && (
+                      <button
+                        title="Editar comunicado"
+                        aria-label="Editar comunicado"
+                        onClick={() => openEditarComunicado(c)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -71,37 +158,8 @@ export function ComunicadosPage() {
         </div>
       )}
 
-      <Modal open={openModal} onClose={() => setOpenModal(false)} title="Novo Comunicado" size="lg">
-        <form className="space-y-4" onSubmit={async e => {
-            e.preventDefault()
-            if (!form.titulo || !form.conteudo) return
-            const novo: Comunicado = {
-              id: `c-${Date.now()}`,
-              condominio_id: profile?.condominio_id ?? 'c1',
-              titulo: form.titulo,
-              conteudo: form.conteudo,
-              importante: form.importante,
-              destinatario_id: form.destinatario_id || undefined,
-              autor_id: profile?.id ?? 'demo',
-              created_at: new Date().toISOString(),
-            }
-            if (isSupabaseConfigured) {
-              const { error } = await supabase.from('comunicados').insert({
-                id: novo.id,
-                condominio_id: novo.condominio_id,
-                titulo: novo.titulo,
-                conteudo: novo.conteudo,
-                importante: novo.importante,
-                destinatario_id: novo.destinatario_id ?? null,
-                autor_id: novo.autor_id,
-                created_at: novo.created_at,
-              })
-              if (error) { console.error('Erro ao guardar comunicado:', error); return }
-            }
-            setComunicados(prev => [novo, ...prev])
-            setOpenModal(false)
-            setForm({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
-          }}>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} title={editingComunicado ? 'Editar Comunicado' : 'Novo Comunicado'} size="lg">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <Input label="Título" value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} placeholder="Título do comunicado" required />
           <Select
             label="Destinatário"
@@ -119,7 +177,7 @@ export function ComunicadosPage() {
           </label>
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" type="button" onClick={() => setOpenModal(false)}>Cancelar</Button>
-            <Button type="submit">Publicar</Button>
+            <Button type="submit">{editingComunicado ? 'Guardar alterações' : 'Publicar'}</Button>
           </div>
         </form>
       </Modal>
