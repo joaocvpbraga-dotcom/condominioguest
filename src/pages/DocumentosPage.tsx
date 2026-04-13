@@ -94,6 +94,7 @@ export function DocumentosPage() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const isOwner = profile?.role === 'morador'
+  const canUpload = isAdmin || isOwner
   const roleLabel = (role: string) => (role === 'inquilino' || role === 'funcionario') ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatariosAlerta = moradores.filter(m => m.role !== 'admin')
 
@@ -114,8 +115,17 @@ export function DocumentosPage() {
     setOpenModal(true)
   }
 
-  function handleDelete(d: Documento) {
+  async function handleDelete(d: Documento) {
     if (!window.confirm(`Eliminar "${d.nome}"? Esta ação não pode ser desfeita.`)) return
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('documentos').delete().eq('id', d.id)
+      if (error) {
+        console.error('Erro ao eliminar documento:', error)
+        return
+      }
+    }
+
     setDocumentos(prev => prev.filter(x => x.id !== d.id))
   }
 
@@ -197,8 +207,9 @@ export function DocumentosPage() {
     return groups
   }, [filtered, groupByFracao, fracoes])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!canUpload) return
     if (!form.nome) return
     const fracaoId = (form.categoria === 'seguro' || form.categoria === 'comprovativo') && form.fracao_id ? form.fracao_id : undefined
     if (editDoc) {
@@ -211,11 +222,27 @@ export function DocumentosPage() {
         periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
         fracao_id: fracaoId,
       }
+
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('documentos').update({
+          nome: updated.nome,
+          descricao: updated.descricao ?? null,
+          categoria: updated.categoria,
+          fracao_id: updated.fracao_id ?? null,
+          data_validade: updated.data_validade ?? null,
+          periodo: updated.periodo ?? null,
+        }).eq('id', updated.id)
+        if (error) {
+          console.error('Erro ao atualizar documento:', error)
+          return
+        }
+      }
+
       setDocumentos(prev => prev.map(d => d.id === editDoc.id ? updated : d))
     } else {
       const novo: Documento = {
         id: `d-${Date.now()}`,
-        condominio_id: 'c1',
+        condominio_id: profile?.condominio_id ?? 'c1',
         nome: form.nome,
         descricao: form.descricao || undefined,
         categoria: form.categoria as Documento['categoria'],
@@ -227,6 +254,28 @@ export function DocumentosPage() {
         periodo: form.categoria === 'comprovativo' ? form.periodo : undefined,
         created_at: new Date().toISOString(),
       }
+
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('documentos').insert({
+          id: novo.id,
+          condominio_id: novo.condominio_id,
+          nome: novo.nome,
+          descricao: novo.descricao ?? null,
+          categoria: novo.categoria,
+          url: novo.url,
+          autor_id: novo.autor_id,
+          morador_id: novo.morador_id ?? null,
+          fracao_id: novo.fracao_id ?? null,
+          data_validade: novo.data_validade ?? null,
+          periodo: novo.periodo ?? null,
+          created_at: novo.created_at,
+        })
+        if (error) {
+          console.error('Erro ao guardar documento:', error)
+          return
+        }
+      }
+
       setDocumentos(prev => [novo, ...prev])
     }
     setOpenModal(false)

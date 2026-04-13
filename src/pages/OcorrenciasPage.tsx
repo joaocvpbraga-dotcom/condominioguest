@@ -46,6 +46,7 @@ export function OcorrenciasPage() {
   const isAdmin = profile?.role === 'admin'
 
   const [filter, setFilter] = useState('todas')
+  const [adminTab, setAdminTab] = useState<'ativas' | 'fechadas'>('ativas')
   const [selected, setSelected] = useState<OcorrenciaComNotas | null>(null)
   const [novaNota, setNovaNota] = useState('')
   const [notaInterna, setNotaInterna] = useState(true)
@@ -62,9 +63,21 @@ export function OcorrenciasPage() {
     ? ocorrencias
     : ocorrencias.filter(o => o.autor_id === profile?.id)
 
+  const tabOcorrencias = isAdmin
+    ? adminTab === 'fechadas'
+      ? visibleOcorrencias.filter(o => o.estado === 'fechada')
+      : visibleOcorrencias.filter(o => o.estado !== 'fechada')
+    : visibleOcorrencias
+
+  const pipelineVisivel = isAdmin
+    ? adminTab === 'fechadas'
+      ? PIPELINE.filter(p => p.estado === 'fechada')
+      : PIPELINE.filter(p => p.estado !== 'fechada')
+    : PIPELINE
+
   const filtered = filter === 'todas'
-    ? visibleOcorrencias
-    : visibleOcorrencias.filter(o => o.estado === filter)
+    ? tabOcorrencias
+    : tabOcorrencias.filter(o => o.estado === filter)
 
   const canEditOcorrencia = (o: OcorrenciaComNotas) => isAdmin || o.autor_id === profile?.id
   const canDeleteOcorrencia = (o: OcorrenciaComNotas) => isAdmin || o.autor_id === profile?.id
@@ -403,10 +416,31 @@ export function OcorrenciasPage() {
           </Button>
         </div>
 
+        {isAdmin && (
+          <div className="px-4 md:px-8 mb-3">
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => { setAdminTab('ativas'); setFilter('todas') }}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${adminTab === 'ativas' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                Ativas {visibleOcorrencias.filter(o => o.estado !== 'fechada').length}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAdminTab('fechadas'); setFilter('todas') }}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${adminTab === 'fechadas' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                Fechadas {visibleOcorrencias.filter(o => o.estado === 'fechada').length}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Contadores pipeline */}
-        <div className="px-8 mb-4 grid grid-cols-4 gap-2">
-          {PIPELINE.map(p => {
-            const count = visibleOcorrencias.filter(o => o.estado === p.estado).length
+        <div className="px-4 md:px-8 mb-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+          {pipelineVisivel.map(p => {
+            const count = tabOcorrencias.filter(o => o.estado === p.estado).length
             return (
               <button
                 key={p.estado}
@@ -421,13 +455,13 @@ export function OcorrenciasPage() {
           })}
         </div>
         {filter !== 'todas' && (
-          <div className="px-8 mb-2">
+          <div className="px-4 md:px-8 mb-2">
             <button onClick={() => setFilter('todas')} className="text-xs text-blue-600 hover:underline">← Ver todas</button>
           </div>
         )}
 
         {/* Cards */}
-        <div className="px-8 pb-8 space-y-2 overflow-y-auto flex-1">
+        <div className="px-4 md:px-8 pb-8 space-y-2 overflow-y-auto flex-1">
           {filtered.length === 0 && (
             <div className="text-center py-16 text-slate-400">
               <AlertTriangle size={40} className="mx-auto mb-3 opacity-30" />

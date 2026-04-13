@@ -118,6 +118,20 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.condominio_id])
 
   const [documentos, setDocumentos] = useState<Documento[]>(() => loadLS('cg_documentos', []))
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+
+    supabase
+      .from('documentos')
+      .select('*')
+      .eq('condominio_id', profile.condominio_id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error('documentos fetch error:', error); return }
+        if (data) setDocumentos(data as Documento[])
+      })
+  }, [profile?.condominio_id])
+
   const [rubricas, setRubricas] = useState<Orcamento[]>(() => loadLS('cg_rubricas', []))
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => loadLS('cg_fornecedores', []))
   const [manutencoes, setManutencoes] = useState<Manutencao[]>(() => loadLS('cg_manutencoes', []))
