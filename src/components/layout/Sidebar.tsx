@@ -39,6 +39,7 @@ const inquilinoNavItems = [
 export function Sidebar() {
   const { profile, signOut } = useAuth()
   const [open, setOpen] = useState(false)
+  const roleLabel = profile?.role === 'admin' ? 'Administrador' : profile?.role === 'funcionario' ? 'Inquilino' : profile?.role === 'morador' ? 'Proprietário' : ''
 
   const navItems = profile?.role === 'admin'
     ? adminNavItems
@@ -79,7 +80,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{profile?.nome ?? 'Utilizador'}</p>
-            <p className="text-xs text-slate-400 truncate capitalize">{profile?.role ?? ''}</p>
+            <p className="text-xs text-slate-400 truncate">{roleLabel}</p>
           </div>
           <button
             onClick={signOut}
