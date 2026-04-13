@@ -221,7 +221,7 @@ export function OcorrenciasPage() {
   const pipelineIdx = selected ? PIPELINE.findIndex(p => p.estado === selected.estado) : -1
 
   return (
-    <div className="flex h-full" style={{ minHeight: 'calc(100vh - 0px)' }}>
+    <div className="flex h-full min-h-screen">
       {/* ── Lista ── */}
       <div className={`flex flex-col flex-1 min-w-0 transition-all ${selected ? 'xl:max-w-[55%]' : ''}`}>
         <div className="p-4 pb-4 md:p-8 flex items-center justify-between">
@@ -328,7 +328,7 @@ export function OcorrenciasPage() {
               <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Ocorrência #{selected.id}</p>
               <h2 className="font-bold text-slate-800 leading-snug">{selected.titulo}</h2>
             </div>
-            <button onClick={() => setSelected(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 shrink-0">
+            <button title="Fechar painel" aria-label="Fechar painel" onClick={() => setSelected(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 shrink-0">
               <XCircle size={18} />
             </button>
           </div>
