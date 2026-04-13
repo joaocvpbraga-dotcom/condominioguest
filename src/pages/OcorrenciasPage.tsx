@@ -135,18 +135,60 @@ export function OcorrenciasPage() {
     setSelected(updated)
   }
 
-  function avancarEstado(o: OcorrenciaComNotas) {
+  async function avancarEstado(o: OcorrenciaComNotas) {
     const idx = PIPELINE.findIndex(p => p.estado === o.estado)
     if (idx >= PIPELINE.length - 1) return
     const novoEstado = PIPELINE[idx + 1].estado as Ocorrencia['estado']
+    const novoEstadoLabel = PIPELINE[idx + 1].label
     const nota: Nota = {
       id: `n-${Date.now()}`,
-      texto: `Estado alterado para "${PIPELINE[idx + 1].label}".`,
+      texto: `Estado alterado para "${novoEstadoLabel}".`,
       autor: 'Admin',
       created_at: new Date().toISOString(),
       interna: true,
     }
-    updateOcorrencia({ ...o, estado: novoEstado, notas: [...o.notas, nota] })
+    const updated = { ...o, estado: novoEstado, notas: [...o.notas, nota] }
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('ocorrencias').update({ estado: novoEstado }).eq('id', o.id)
+      if (error) {
+        console.error('Erro ao atualizar estado da ocorrência:', error)
+        return
+      }
+    }
+
+    updateOcorrencia(updated)
+
+    // Feedback direto ao autor quando o estado muda (visível em Comunicados)
+    const feedback: Comunicado = {
+      id: `fb-ocorrencia-${Date.now()}`,
+      condominio_id: o.condominio_id,
+      titulo: `Atualização da ocorrência: ${o.titulo}`,
+      conteudo: `A sua ocorrência foi atualizada para o estado "${novoEstadoLabel}".`,
+      autor_id: profile?.id ?? 'admin',
+      importante: false,
+      destinatario_id: o.autor_id,
+      created_at: new Date().toISOString(),
+    }
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('comunicados').insert({
+        id: feedback.id,
+        condominio_id: feedback.condominio_id,
+        titulo: feedback.titulo,
+        conteudo: feedback.conteudo,
+        autor_id: feedback.autor_id,
+        importante: feedback.importante,
+        destinatario_id: feedback.destinatario_id,
+        created_at: feedback.created_at,
+      })
+      if (error) {
+        console.error('Erro ao enviar feedback de estado ao utilizador:', error)
+        return
+      }
+    }
+
+    setComunicados(prev => [feedback, ...prev])
   }
 
   function adicionarNota(o: OcorrenciaComNotas) {
