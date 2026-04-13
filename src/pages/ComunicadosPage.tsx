@@ -150,17 +150,17 @@ export function ComunicadosPage() {
           {visibleComunicados.map(c => {
             const destinatario = c.destinatario_id ? moradores.find(m => m.id === c.destinatario_id) : null
             return (
-              <Card key={c.id} className={c.importante ? 'border-l-4 border-l-blue-500' : ''}>
+              <Card key={c.id} className={c.importante ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''}>
                 <CardBody>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${c.importante ? 'bg-blue-100' : 'bg-slate-100'}`}>
-                        {destinatario ? <User size={16} className="text-orange-500" /> : c.importante ? <Pin size={16} className="text-blue-600" /> : <Megaphone size={16} className="text-slate-500" />}
+                      <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${c.importante ? 'bg-red-100' : 'bg-slate-100'}`}>
+                        {destinatario ? <User size={16} className="text-orange-500" /> : c.importante ? <Pin size={16} className="text-red-600" /> : <Megaphone size={16} className="text-slate-500" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-slate-800">{c.titulo}</h3>
-                          {c.importante && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">Importante</span>}
+                          {c.importante && <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-medium">Importante</span>}
                           {destinatario && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">Para: {destinatario.nome} ({roleLabel(destinatario.role)})</span>}
                         </div>
                         <p className="text-sm text-slate-600 mt-2 leading-relaxed">{c.conteudo}</p>
@@ -225,7 +225,7 @@ export function ComunicadosPage() {
           />
           <Textarea label="Conteúdo" value={form.conteudo} onChange={e => setForm({ ...form, conteudo: e.target.value })} rows={6} placeholder="Escreva o comunicado..." required />
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.importante} onChange={e => setForm({ ...form, importante: e.target.checked })} className="w-4 h-4 rounded text-blue-600" />
+            <input type="checkbox" checked={form.importante} onChange={e => setForm({ ...form, importante: e.target.checked })} className="w-4 h-4 rounded text-red-600" />
             <span className="text-sm text-slate-700 font-medium">Marcar como importante</span>
           </label>
           <div className="flex gap-2 justify-end pt-2">
