@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDateTime } from '@/lib/utils'
-import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send, Pencil } from 'lucide-react'
+import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send, Pencil, Trash2 } from 'lucide-react'
 import type { Ocorrencia, Nota, OcorrenciaComNotas, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -65,6 +65,27 @@ export function OcorrenciasPage() {
     : visibleOcorrencias.filter(o => o.estado === filter)
 
   const canEditOcorrencia = (o: OcorrenciaComNotas) => isAdmin || o.autor_id === profile?.id
+  const canDeleteOcorrencia = (o: OcorrenciaComNotas) => isAdmin || o.autor_id === profile?.id
+
+  async function handleDeleteOcorrencia(o: OcorrenciaComNotas) {
+    if (!canDeleteOcorrencia(o)) return
+    if (!window.confirm(`Eliminar ocorrência "${o.titulo}"?`)) return
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('ocorrencias').delete().eq('id', o.id)
+      if (error) {
+        console.error('Erro ao eliminar ocorrência:', error)
+        return
+      }
+    }
+
+    setOcorrencias(prev => prev.filter(x => x.id !== o.id))
+    if (selected?.id === o.id) setSelected(null)
+    if (detailOcorrencia?.id === o.id) {
+      setDetailOcorrencia(null)
+      setOpenDetail(false)
+    }
+  }
 
   function openNovaOcorrencia() {
     setEditingOcorrencia(null)
@@ -306,6 +327,16 @@ export function OcorrenciasPage() {
                       className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                     >
                       <Pencil size={14} />
+                    </button>
+                  )}
+                  {canDeleteOcorrencia(o) && (
+                    <button
+                      title="Eliminar ocorrência"
+                      aria-label="Eliminar ocorrência"
+                      onClick={e => { e.stopPropagation(); handleDeleteOcorrencia(o) }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   )}
                   <Badge variant={estadoVariant[o.estado]}>

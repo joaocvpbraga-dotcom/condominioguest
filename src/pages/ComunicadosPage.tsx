@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDateTime } from '@/lib/utils'
-import { Megaphone, Plus, Pin, User, Pencil } from 'lucide-react'
+import { Megaphone, Plus, Pin, User, Pencil, Trash2 } from 'lucide-react'
 import type { Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -24,6 +24,22 @@ export function ComunicadosPage() {
   const [form, setForm] = useState({ titulo: '', conteudo: '', importante: false, destinatario_id: '' })
 
   const canEditComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
+  const canDeleteComunicado = (c: Comunicado) => isAdmin || c.autor_id === profile?.id
+
+  async function handleDeleteComunicado(c: Comunicado) {
+    if (!canDeleteComunicado(c)) return
+    if (!window.confirm(`Eliminar comunicado "${c.titulo}"?`)) return
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('comunicados').delete().eq('id', c.id)
+      if (error) {
+        console.error('Erro ao eliminar comunicado:', error)
+        return
+      }
+    }
+
+    setComunicados(prev => prev.filter(x => x.id !== c.id))
+  }
 
   function openNovoComunicado() {
     setEditingComunicado(null)
@@ -151,16 +167,28 @@ export function ComunicadosPage() {
                         <p className="text-xs text-slate-400 mt-3">{formatDateTime(c.created_at)}</p>
                       </div>
                     </div>
-                    {canEditComunicado(c) && (
-                      <button
-                        title="Editar comunicado"
-                        aria-label="Editar comunicado"
-                        onClick={() => openEditarComunicado(c)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {canEditComunicado(c) && (
+                        <button
+                          title="Editar comunicado"
+                          aria-label="Editar comunicado"
+                          onClick={() => openEditarComunicado(c)}
+                          className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
+                      {canDeleteComunicado(c) && (
+                        <button
+                          title="Eliminar comunicado"
+                          aria-label="Eliminar comunicado"
+                          onClick={() => handleDeleteComunicado(c)}
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </CardBody>
               </Card>
