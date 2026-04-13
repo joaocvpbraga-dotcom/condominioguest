@@ -15,7 +15,7 @@ export function ComunicadosPage() {
   const { comunicados, setComunicados, moradores } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const roleLabel = (role: string) => role === 'funcionario' ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
+  const roleLabel = (role: string) => (role === 'inquilino' || role === 'funcionario') ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatarios = moradores.filter(m => m.role !== 'admin')
 
   const [openModal, setOpenModal] = useState(false)
