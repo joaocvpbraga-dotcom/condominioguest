@@ -6,9 +6,10 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDateTime } from '@/lib/utils'
 import { AlertTriangle, Plus, ChevronRight, MessageSquare, Clock, CheckCircle2, XCircle, Send } from 'lucide-react'
-import type { Ocorrencia, Nota, OcorrenciaComNotas } from '@/types'
+import type { Ocorrencia, Nota, OcorrenciaComNotas, Comunicado } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 // ── Configs ───────────────────────────────────────────────────
 const PIPELINE: Array<{ estado: string; label: string; color: string; icon: React.ReactNode }> = [
@@ -38,7 +39,7 @@ const estadoVariant: Record<string, 'warning' | 'info' | 'success' | 'default'> 
 }
 
 export function OcorrenciasPage() {
-  const { ocorrencias, setOcorrencias } = useAppData()
+  const { ocorrencias, setOcorrencias, setComunicados } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
 
@@ -116,10 +117,10 @@ export function OcorrenciasPage() {
     setNovaNota('')
   }
 
-  function criarOcorrencia() {
+  async function criarOcorrencia() {
     const nova: OcorrenciaComNotas = {
       id: `o-${Date.now()}`,
-      condominio_id: 'c1',
+      condominio_id: profile?.condominio_id ?? 'c1',
       titulo: form.titulo,
       descricao: form.descricao,
       tipo: form.tipo as Ocorrencia['tipo'],
@@ -131,6 +132,37 @@ export function OcorrenciasPage() {
       notas: [],
     }
     setOcorrencias(prev => [nova, ...prev])
+
+    const isGrave = nova.tipo === 'risco' || nova.prioridade === 'alta' || nova.prioridade === 'urgente'
+    if (isGrave) {
+      const alerta: Comunicado = {
+        id: `alerta-ocorrencia-${Date.now()}`,
+        condominio_id: nova.condominio_id,
+        titulo: `Alerta: ocorrência grave - ${nova.titulo}`,
+        conteudo: `Foi registada uma ocorrência grave (${tipoLabel[nova.tipo]}, prioridade ${nova.prioridade}) por ${nova.autor_nome}.`,
+        autor_id: profile?.id ?? 'demo',
+        importante: true,
+        destinatario_id: undefined,
+        created_at: new Date().toISOString(),
+      }
+
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.from('comunicados').insert({
+          id: alerta.id,
+          condominio_id: alerta.condominio_id,
+          titulo: alerta.titulo,
+          conteudo: alerta.conteudo,
+          autor_id: alerta.autor_id,
+          importante: alerta.importante,
+          destinatario_id: null,
+          created_at: alerta.created_at,
+        })
+        if (!error) setComunicados(prev => [alerta, ...prev])
+      } else {
+        setComunicados(prev => [alerta, ...prev])
+      }
+    }
+
     setOpenModal(false)
     setForm({ titulo: '', descricao: '', tipo: 'avaria', prioridade: 'media' })
   }
