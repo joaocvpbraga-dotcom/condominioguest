@@ -19,6 +19,7 @@ export function FracaoOnboardingModal() {
   if (hasFracao) return null
 
   const availableFracoes = fracoes.filter(f => !f.proprietario_id)
+  if (availableFracoes.length === 0) return null
 
   async function handleConfirm() {
     if (!selectedFracao || !profile) return
@@ -51,34 +52,27 @@ export function FracaoOnboardingModal() {
           </div>
         </div>
 
-        {availableFracoes.length === 0 ? (
-          <div className="bg-amber-50 text-amber-700 text-sm rounded-xl p-4 text-center">
-            Não existem frações disponíveis para associar.<br />
-            Contacte o administrador do condomínio.
-          </div>
-        ) : (
-          <>
-            <Select
-              label="Fração"
-              value={selectedFracao}
-              onChange={e => setSelectedFracao(e.target.value)}
-              options={[
-                { value: '', label: 'Selecionar fração...' },
-                ...availableFracoes
-                  .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }))
-                  .map(f => ({ value: f.id, label: `Fração ${f.numero}${f.andar ? ` — ${f.andar}º andar` : ''} (${f.tipo})` })),
-              ]}
-            />
-            <Button
-              className="w-full"
-              onClick={handleConfirm}
-              disabled={!selectedFracao}
-              loading={loading}
-            >
-              Confirmar
-            </Button>
-          </>
-        )}
+        <>
+          <Select
+            label="Fração"
+            value={selectedFracao}
+            onChange={e => setSelectedFracao(e.target.value)}
+            options={[
+              { value: '', label: 'Selecionar fração...' },
+              ...availableFracoes
+                .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }))
+                .map(f => ({ value: f.id, label: `Fração ${f.numero}${f.andar ? ` — ${f.andar}º andar` : ''} (${f.tipo})` })),
+            ]}
+          />
+          <Button
+            className="w-full"
+            onClick={handleConfirm}
+            disabled={!selectedFracao}
+            loading={loading}
+          >
+            Confirmar
+          </Button>
+        </>
       </div>
     </Modal>
   )
