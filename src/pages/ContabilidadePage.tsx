@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/utils'
-import { PiggyBank, Plus, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Banknote, Users } from 'lucide-react'
+import { PiggyBank, Plus, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Banknote, Users, Trash2 } from 'lucide-react'
 import type { Orcamento, RegistoCaixa, RecebimentoTrimestral } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -77,6 +77,16 @@ export function ContabilidadePage() {
     setRecebimentoForm({ ano: String(anoAtual), trimestre: String(trimestreAtual), valor: '', notas: '' })
   }
 
+  function eliminarRegistoCaixa(id: string) {
+    if (!window.confirm('Eliminar este registo de caixa? Esta ação não pode ser desfeita.')) return
+    setRegistosCaixa(prev => prev.filter(r => r.id !== id))
+  }
+
+  function eliminarRecebimento(id: string) {
+    if (!window.confirm('Eliminar este registo de recebimento? Esta ação não pode ser desfeita.')) return
+    setRecebimentos(prev => prev.filter(r => r.id !== id))
+  }
+
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
@@ -145,7 +155,15 @@ export function ContabilidadePage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {caixaOrdenada.map(r => (
-                  <div key={r.id} className={`rounded-xl p-4 border ${r.ano === anoAtual && r.mes === mesAtual ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+                  <div key={r.id} className={`rounded-xl p-4 border relative ${r.ano === anoAtual && r.mes === mesAtual ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+                    <button
+                      title="Eliminar registo"
+                      aria-label="Eliminar registo"
+                      onClick={() => eliminarRegistoCaixa(r.id)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                     <p className="text-xs text-slate-500 mb-1">{MESES[r.mes - 1]} {r.ano}</p>
                     <p className="text-lg font-bold text-slate-800">{formatCurrency(r.valor)}</p>
                     {r.notas && <p className="text-xs text-slate-400 mt-1 truncate">{r.notas}</p>}
@@ -174,7 +192,15 @@ export function ContabilidadePage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {recebimentosOrdenados.map(r => (
-                  <div key={r.id} className={`rounded-xl p-4 border ${r.ano === anoAtual && r.trimestre === trimestreAtual ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'}`}>
+                  <div key={r.id} className={`rounded-xl p-4 border relative ${r.ano === anoAtual && r.trimestre === trimestreAtual ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'}`}>
+                    <button
+                      title="Eliminar registo"
+                      aria-label="Eliminar registo"
+                      onClick={() => eliminarRecebimento(r.id)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                     <p className="text-xs text-slate-500 mb-1">{r.trimestre}.º Trim. {r.ano}</p>
                     <p className="text-lg font-bold text-slate-800">{formatCurrency(r.valor)}</p>
                     {r.notas && <p className="text-xs text-slate-400 mt-1 truncate">{r.notas}</p>}

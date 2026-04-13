@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Plus, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Zap, Euro } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Zap, Euro, Trash2 } from 'lucide-react'
 import type { Quota } from '@/types'
 import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -117,6 +117,11 @@ export function QuotasPage() {
         : q
     ))
     setPagoModal({ open: false, quotaId: null })
+  }
+
+  function eliminarQuota(quotaId: string) {
+    if (!window.confirm('Eliminar esta quota? Esta ação não pode ser desfeita.')) return
+    setQuotas(prev => prev.filter(q => q.id !== quotaId))
   }
 
   function emitirEmMassa() {
@@ -266,6 +271,7 @@ export function QuotasPage() {
                     {q.data_pagamento ? formatDate(q.data_pagamento) : '—'}
                   </td>
                   <td className="px-5 py-3.5 text-right">
+                    <div className="inline-flex items-center gap-2">
                     {isAdmin && q.estado !== 'pago' && (
                       <Button
                         size="sm"
@@ -280,6 +286,17 @@ export function QuotasPage() {
                         <CheckCircle2 size={13} /> Pago
                       </span>
                     )}
+                    {isAdmin && (
+                      <button
+                        title="Eliminar quota"
+                        aria-label="Eliminar quota"
+                        onClick={() => eliminarQuota(q.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
