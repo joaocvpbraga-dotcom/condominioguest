@@ -99,6 +99,24 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       if (data) setComunicados(data as Comunicado[])
     })
   }, [profile?.id, profile?.condominio_id])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+
+    supabase
+      .from('ocorrencias')
+      .select('*')
+      .eq('condominio_id', profile.condominio_id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error('ocorrencias fetch error:', error); return }
+        if (data) {
+          const withNotas = (data as OcorrenciaComNotas[]).map(o => ({ ...o, notas: o.notas ?? [] }))
+          setOcorrencias(withNotas)
+        }
+      })
+  }, [profile?.condominio_id])
+
   const [documentos, setDocumentos] = useState<Documento[]>(() => loadLS('cg_documentos', []))
   const [rubricas, setRubricas] = useState<Orcamento[]>(() => loadLS('cg_rubricas', []))
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => loadLS('cg_fornecedores', []))
