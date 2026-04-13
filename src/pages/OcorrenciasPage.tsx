@@ -41,7 +41,7 @@ const estadoVariant: Record<string, 'warning' | 'info' | 'success' | 'default'> 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export function OcorrenciasPage() {
-  const { ocorrencias, setOcorrencias, setComunicados } = useAppData()
+  const { ocorrencias, setOcorrencias, setComunicados, moradores } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
 
@@ -114,7 +114,7 @@ export function OcorrenciasPage() {
     setOpenDetail(true)
   }
 
-  function enviarRespostaMorador() {
+  async function enviarRespostaMorador() {
     if (!moradorResposta.trim() || !detailOcorrencia) return
     const nota: Nota = {
       id: `n-${Date.now()}`,
@@ -126,6 +126,36 @@ export function OcorrenciasPage() {
     const updated = { ...detailOcorrencia, notas: [...detailOcorrencia.notas, nota] }
     setOcorrencias(prev => prev.map(o => o.id === updated.id ? updated : o))
     setDetailOcorrencia(updated)
+
+    const admins = moradores.filter(m => m.role === 'admin')
+    const comunicadosAdmin: Comunicado[] = admins.map(a => ({
+      id: `fb-admin-ocorrencia-${Date.now()}-${a.id.slice(0, 8)}`,
+      condominio_id: detailOcorrencia.condominio_id,
+      titulo: `Novo comentário na ocorrência: ${detailOcorrencia.titulo}`,
+      conteudo: `${profile?.nome ?? 'Morador'} comentou: "${nota.texto}"`,
+      autor_id: profile?.id ?? 'demo',
+      importante: false,
+      destinatario_id: a.id,
+      created_at: new Date().toISOString(),
+    }))
+
+    if (isSupabaseConfigured && comunicadosAdmin.length > 0) {
+      const { error } = await supabase.from('comunicados').insert(
+        comunicadosAdmin.map(c => ({
+          id: c.id,
+          condominio_id: c.condominio_id,
+          titulo: c.titulo,
+          conteudo: c.conteudo,
+          autor_id: c.autor_id,
+          importante: c.importante,
+          destinatario_id: c.destinatario_id,
+          created_at: c.created_at,
+        }))
+      )
+      if (error) console.error('Erro ao notificar administrador sobre comentário:', error)
+    }
+
+    setComunicados(prev => [...comunicadosAdmin, ...prev])
     setMoradorResposta('')
   }
 
