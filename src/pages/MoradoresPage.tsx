@@ -781,12 +781,27 @@ export function MoradoresPage() {
         title={editFracao ? 'Editar Fração' : 'Nova Fração'}
       >
         <form className="space-y-4" onSubmit={handleFracaoSubmit}>
+          <div>
+            <p className="text-sm font-medium text-slate-700 mb-2">Identificação rápida</p>
+            <div className="flex gap-2 flex-wrap">
+              {['A', 'B', 'C', 'D'].map(letra => (
+                <button
+                  key={letra}
+                  type="button"
+                  onClick={() => setFormFracao({ ...formFracao, numero: letra })}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${formFracao.numero.toUpperCase() === letra ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                >
+                  Fração {letra}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Número / Identificação"
               value={formFracao.numero}
               onChange={e => setFormFracao({ ...formFracao, numero: e.target.value })}
-              placeholder="Ex: 1A, 2B, 101..."
+              placeholder="Ex: A, B, C, D, 1A..."
               required
             />
             <Input
