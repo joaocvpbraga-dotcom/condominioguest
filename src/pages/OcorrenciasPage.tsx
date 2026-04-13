@@ -352,6 +352,7 @@ export function OcorrenciasPage() {
           )}
           {filtered.map(o => {
             const publicNotes = o.notas.filter(n => !n.interna)
+            const foiAtualizadaPeloAdmin = o.estado !== 'aberta' || o.notas.some(n => n.autor === 'Admin')
             return (
             <Card
               key={o.id}
@@ -365,6 +366,11 @@ export function OcorrenciasPage() {
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${prioridadeStyle[o.prioridade]}`}>
                       {o.prioridade}
                     </span>
+                    {!isAdmin && foiAtualizadaPeloAdmin && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                        Atualizada pelo administrador
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 truncate">{o.descricao}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
