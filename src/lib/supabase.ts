@@ -9,24 +9,30 @@ export const isSupabaseConfigured = !!(import.meta.env.VITE_SUPABASE_URL && impo
 /** Chama uma Edge Function autenticada com o JWT da sessão atual */
 export async function callAdminFunction<T = unknown>(
   name: 'create-user' | 'delete-user' | 'update-role',
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  accessToken?: string
 ): Promise<{ data: T | null; error: string | null }> {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return { data: null, error: 'Sessão inválida' }
+  let token = accessToken
+  if (!token) {
+    const { data: { session } } = await supabase.auth.getSession()
+    token = session?.access_token
+  }
+  if (!token) return { data: null, error: 'Sessão inválida' }
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      'apikey': supabaseAnonKey,
-    },
-    body: JSON.stringify(body),
-  })
+  try {
+    const { data, error } = await supabase.functions.invoke(name, {
+      body,
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
-  const json = await res.json()
-  if (!res.ok) return { data: null, error: json.error ?? `Erro ${res.status}` }
-  return { data: json as T, error: null }
+    if (error) return { data: null, error: error.message || 'Erro ao chamar função administrativa' }
+    return { data: (data as T) ?? null, error: null }
+  } catch (error: unknown) {
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Falha de rede ao chamar função administrativa',
+    }
+  }
 }
 
 /** Cliente isolado para criar utilizadores sem sobrepor a sessão do admin */

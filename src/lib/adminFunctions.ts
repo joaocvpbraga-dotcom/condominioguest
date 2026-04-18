@@ -18,15 +18,13 @@ export async function criarUtilizador({ email, password, nome, role }: {
 }
 
 export async function eliminarUtilizador(userId: string, accessToken: string) {
-  void accessToken
-  const { data, error } = await callAdminFunction<Record<string, unknown>>('delete-user', { userId })
+  const { data, error } = await callAdminFunction<Record<string, unknown>>('delete-user', { userId }, accessToken)
   if (error || !data) throw new Error(error || 'Erro ao eliminar utilizador')
   return data
 }
 
 export async function atualizarRole(userId: string, role: string, accessToken: string) {
-  void accessToken
-  const { data, error } = await callAdminFunction<Record<string, unknown>>('update-role', { userId, role })
+  const { data, error } = await callAdminFunction<Record<string, unknown>>('update-role', { userId, role }, accessToken)
   if (error || !data) throw new Error(error || 'Erro ao atualizar perfil')
   return data
 }

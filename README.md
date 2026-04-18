@@ -71,3 +71,13 @@ export default defineConfig([
   },
 ])
 ```
+
+## Deploy automatico das Edge Functions
+
+O repositorio inclui um workflow em `.github/workflows/deploy-supabase-functions.yml` que faz deploy das funcoes `create-user`, `delete-user` e `update-role` quando houver push em `main`/`master` com alteracoes em `supabase/functions/**`.
+
+Para funcionar no GitHub Actions, cria o secret do repositorio:
+
+- `SUPABASE_ACCESS_TOKEN`: token pessoal do Supabase com permissao para deploy.
+
+Depois disso, cada push no branch principal faz o deploy automatico.
