@@ -36,17 +36,52 @@ Deno.serve(async (req) => {
 
     const { userId } = await req.json()
     if (!userId) return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (userId === caller.id) {
+      return new Response(JSON.stringify({ error: 'Nao e permitido eliminar o proprio utilizador.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Confirmar que o utilizador a eliminar pertence ao mesmo condomínio
-    const { data: targetProfile } = await adminClient.from('profiles').select('condominio_id').eq('id', userId).single()
+    const { data: targetProfile, error: targetProfileErr } = await adminClient
+      .from('profiles')
+      .select('condominio_id')
+      .eq('id', userId)
+      .single()
+    if (targetProfileErr || !targetProfile) {
+      return new Response(JSON.stringify({ error: 'Perfil do utilizador nao encontrado.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     if (targetProfile?.condominio_id !== callerProfile.condominio_id) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Apagar da BD primeiro, depois do Auth
-    await adminClient.from('profiles').delete().eq('id', userId)
+    const { error: profileDeleteErr } = await adminClient.from('profiles').delete().eq('id', userId)
+    if (profileDeleteErr) {
+      return new Response(JSON.stringify({ error: profileDeleteErr.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { error: deleteErr } = await adminClient.auth.admin.deleteUser(userId)
-    if (deleteErr) return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (deleteErr) {
+      const raw = (deleteErr.message || '').toLowerCase()
+      if (raw.includes('user not found')) {
+        return new Response(JSON.stringify({
+          success: true,
+          warning: 'Perfil removido. A conta de autenticacao ja nao existia no Auth.',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

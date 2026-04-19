@@ -12,38 +12,23 @@ import { useAppData } from '@/contexts/AppDataContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { criarUtilizador, eliminarUtilizador, atualizarRole } from '@/lib/adminFunctions'
-
-
-const roleLabels: Record<string, string> = { admin: 'Administrador', morador: 'Proprietário', inquilino: 'Inquilino', funcionario: 'Inquilino' }
-const roleVariant: Record<string, 'info' | 'success' | 'default'> = { admin: 'info', morador: 'success', inquilino: 'default', funcionario: 'default' }
-
-const EMPTY_MORADOR = { nome: '', email: '', telefone: '', role: 'morador', fracao_id: '', senha: '' }
-const EMPTY_FRACAO = { numero: '', andar: '', tipo: 'apartamento', area: '', permilagem: '', proprietario_id: '' }
-
-function getNovoUtilizadorErrorMessage(error: unknown): string {
-  const raw = (error instanceof Error ? error.message : String(error)).toLowerCase()
-  if (
-    raw.includes('already been registered') ||
-    raw.includes('already registered') ||
-    raw.includes('user already registered') ||
-    raw.includes('email_exists')
-  ) {
-    return 'Este email ja esta registado. Use outro email ou recupere a palavra-passe.'
-  }
-  return error instanceof Error ? error.message : String(error)
-}
+import {
+  EMPTY_FRACAO,
+  EMPTY_MORADOR,
+  PERM_KEYS,
+  PERM_LABELS,
+  ROLE_LABELS,
+  ROLE_VARIANT,
+  type FracaoFormState,
+  type MoradorFormState,
+} from '@/pages/moradores/constants'
+import { buildPermissoesDefault, getNovoUtilizadorErrorMessage } from '@/pages/moradores/helpers'
 
 export function MoradoresPage() {
   const [tab, setTab] = useState<'moradores' | 'fracoes' | 'utilizadores' | 'permissoes'>('moradores')
 
-  // Permissões helpers
-  const PERM_KEYS: (keyof Omit<PermissoesMorador, 'morador_id'>)[] = ['piscina', 'ginasio', 'estacionamento', 'sala_condominio', 'lavandaria', 'terracos']
-  const PERM_LABELS: Record<string, string> = { piscina: 'Piscina', ginasio: 'Ginásio', estacionamento: 'Estacionamento', sala_condominio: 'Sala Condomínio', lavandaria: 'Lavandaria', terracos: 'Terraços' }
-
   function getPermissoes(moradorId: string): PermissoesMorador {
-    return permissoes.find(p => p.morador_id === moradorId) ?? {
-      morador_id: moradorId, piscina: false, ginasio: false, estacionamento: false, sala_condominio: false, lavandaria: false, terracos: false,
-    }
+    return permissoes.find(p => p.morador_id === moradorId) ?? buildPermissoesDefault(moradorId)
   }
 
   function togglePermissao(moradorId: string, key: keyof Omit<PermissoesMorador, 'morador_id'>) {
@@ -52,7 +37,7 @@ export function MoradoresPage() {
       if (existing) {
         return prev.map(p => p.morador_id === moradorId ? { ...p, [key]: !p[key] } : p)
       }
-      const newPerm: PermissoesMorador = { morador_id: moradorId, piscina: false, ginasio: false, estacionamento: false, sala_condominio: false, lavandaria: false, terracos: false, [key]: true }
+      const newPerm: PermissoesMorador = { ...buildPermissoesDefault(moradorId), [key]: true }
       return [...prev, newPerm]
     })
   }
@@ -147,9 +132,8 @@ export function MoradoresPage() {
     setDeletingUser(u.id)
     if (isSupabaseConfigured) {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { alert('Sessão inválida'); setDeletingUser(null); return }
-        await eliminarUtilizador(u.id, session.access_token)
+        const result = await eliminarUtilizador(u.id)
+        if (result.warning) alert(result.warning)
       } catch (e: unknown) {
         alert(`Erro ao eliminar: ${e instanceof Error ? e.message : e}`)
         setDeletingUser(null)
@@ -166,9 +150,7 @@ export function MoradoresPage() {
     setChangingRole(u.id)
     if (isSupabaseConfigured) {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { alert('Sessão inválida'); setChangingRole(null); return }
-        await atualizarRole(u.id, newRole, session.access_token)
+        await atualizarRole(u.id, newRole)
       } catch (e: unknown) {
         alert(`Erro ao alterar perfil: ${e instanceof Error ? e.message : e}`)
         setChangingRole(null)
@@ -190,12 +172,12 @@ export function MoradoresPage() {
   const [search, setSearch] = useState('')
   const [openMorador, setOpenMorador] = useState(false)
   const [editMorador, setEditMorador] = useState<Profile | null>(null)
-  const [formMorador, setFormMorador] = useState(EMPTY_MORADOR)
+  const [formMorador, setFormMorador] = useState<MoradorFormState>(EMPTY_MORADOR)
 
   // Frações
   const [openFracao, setOpenFracao] = useState(false)
   const [editFracao, setEditFracao] = useState<Fracao | null>(null)
-  const [formFracao, setFormFracao] = useState(EMPTY_FRACAO)
+  const [formFracao, setFormFracao] = useState<FracaoFormState>(EMPTY_FRACAO)
 
   const filteredMoradores = moradores.filter(m =>
     m.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -276,9 +258,8 @@ export function MoradoresPage() {
     if (!window.confirm(`Eliminar "${m.nome}"? Esta ação não pode ser desfeita.`)) return
     if (isSupabaseConfigured) {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { alert('Sessão inválida'); return }
-        await eliminarUtilizador(m.id, session.access_token)
+        const result = await eliminarUtilizador(m.id)
+        if (result.warning) alert(result.warning)
       } catch (e: unknown) {
         alert(`Erro ao eliminar: ${e instanceof Error ? e.message : e}`)
         return
@@ -448,7 +429,7 @@ export function MoradoresPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-slate-800 truncate">{m.nome}</p>
-                        <Badge variant={roleVariant[m.role]}>{roleLabels[m.role]}</Badge>
+                        <Badge variant={ROLE_VARIANT[m.role]}>{ROLE_LABELS[m.role]}</Badge>
                       </div>
                       <div className="mt-1.5 space-y-1">
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -574,7 +555,7 @@ export function MoradoresPage() {
                         </td>
                         <td className="px-6 py-3 text-slate-600">{u.email}</td>
                         <td className="px-6 py-3">
-                          <Badge variant={roleVariant[u.role] ?? 'default'}>{roleLabels[u.role] ?? u.role}</Badge>
+                          <Badge variant={ROLE_VARIANT[u.role] ?? 'default'}>{ROLE_LABELS[u.role] ?? u.role}</Badge>
                         </td>
                         <td className="px-6 py-3 text-slate-400">{formatDate(u.created_at)}</td>
                         <td className="px-6 py-3 text-right">
@@ -746,7 +727,7 @@ export function MoradoresPage() {
           <Select
             label="Perfil"
             value={formMorador.role}
-            onChange={e => setFormMorador({ ...formMorador, role: e.target.value })}
+            onChange={e => setFormMorador({ ...formMorador, role: e.target.value as Profile['role'] })}
             options={[
               { value: 'morador', label: 'Proprietário' },
               { value: 'admin', label: 'Administrador' },
