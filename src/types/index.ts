@@ -27,8 +27,10 @@ export interface Fracao {
   area?: number
   permilagem: number
   proprietario_id?: string
+  inquilino_id?: string
   created_at: string
   proprietario?: Profile
+  inquilino?: Profile
 }
 
 export interface Quota {

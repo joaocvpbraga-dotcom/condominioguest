@@ -11,7 +11,9 @@ export function RoleRoute({ children, allowedRoles }: RoleRouteProps) {
   const { profile } = useAuth()
 
   if (!profile) return <Navigate to="/login" replace />
-  if (!allowedRoles.includes(profile.role)) return <Navigate to="/" replace />
+  if (!allowedRoles.includes(profile.role)) {
+    return <Navigate to="/" replace />
+  }
 
   return <>{children}</>
 }

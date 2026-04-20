@@ -74,10 +74,47 @@ export default defineConfig([
 
 ## Deploy automatico das Edge Functions
 
-O repositorio inclui um workflow em `.github/workflows/deploy-supabase-functions.yml` que faz deploy das funcoes `create-user`, `delete-user` e `update-role` quando houver push em `main`/`master` com alteracoes em `supabase/functions/**`.
+O repositorio inclui o workflow [deploy-supabase-functions.yml](.github/workflows/deploy-supabase-functions.yml) que:
 
-Para funcionar no GitHub Actions, cria o secret do repositorio:
+- faz deploy das funcoes `create-user`, `delete-user` e `update-role` (uma a uma);
+- valida no fim se os 3 endpoints respondem com HTTP 200 no preflight `OPTIONS`.
+
+O workflow executa em:
+
+- push em `main`/`master` quando houver alteracoes em `supabase/functions/**`;
+- execucao manual via `workflow_dispatch`.
+
+### Requisitos no GitHub
+
+Definir o secret do repositorio:
 
 - `SUPABASE_ACCESS_TOKEN`: token pessoal do Supabase com permissao para deploy.
 
-Depois disso, cada push no branch principal faz o deploy automatico.
+### Secrets das Edge Functions (Supabase)
+
+Para envio de email em ocorrencias com prioridade urgente (`urgente`), define no projeto Supabase:
+
+- `RESEND_API_KEY`: chave da API do Resend.
+- `URGENT_ALERT_FROM_EMAIL`: remetente verificado (ex.: `CondoGest <alerts@seudominio.pt>`).
+
+Sem estas variaveis, a ocorrencia continua a ser criada normalmente, mas o envio de email urgente fica desativado.
+
+### Recuperacao manual local (Windows/PowerShell)
+
+Caso precises de forcar deploy fora do GitHub Actions:
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN="SEU_TOKEN"
+npm run supabase:deploy:functions
+```
+
+O comando acima usa [scripts/deploy-and-validate-functions.ps1](scripts/deploy-and-validate-functions.ps1) e tambem valida os endpoints no final.
+
+## Monitorizacao automatica das Edge Functions
+
+Existe um segundo workflow em [healthcheck-supabase-functions.yml](.github/workflows/healthcheck-supabase-functions.yml) para monitorizacao continua.
+
+- corre automaticamente a cada 30 minutos;
+- pode ser executado manualmente via `workflow_dispatch`;
+- valida `create-user`, `delete-user` e `update-role` com preflight `OPTIONS`;
+- falha o job se algum endpoint nao responder HTTP 200.

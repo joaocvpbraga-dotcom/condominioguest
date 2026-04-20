@@ -29,7 +29,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<DashboardPage />} />
+            <Route index element={<RoleRoute allowedRoles={['admin', 'morador', 'inquilino']}><DashboardPage /></RoleRoute>} />
             <Route path="moradores" element={<RoleRoute allowedRoles={['admin']}><MoradoresPage /></RoleRoute>} />
             <Route path="quotas" element={<RoleRoute allowedRoles={['admin', 'morador']}><QuotasPage /></RoleRoute>} />
             <Route path="ocorrencias" element={<RoleRoute allowedRoles={['admin', 'morador', 'inquilino']}><OcorrenciasPage /></RoleRoute>} />

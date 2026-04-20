@@ -100,6 +100,46 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     })
   }, [profile?.id, profile?.condominio_id])
 
+  // Keep comunicados synced across sessions/devices in real time.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+
+    const channel = supabase
+      .channel(`realtime-comunicados-${profile.condominio_id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'comunicados',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const inserted = payload.new as Comunicado
+        setComunicados(prev => prev.some(c => c.id === inserted.id) ? prev : [inserted, ...prev])
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'comunicados',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const updated = payload.new as Comunicado
+        setComunicados(prev => prev.map(c => c.id === updated.id ? updated : c))
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'comunicados',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const deletedId = String(payload.old.id)
+        setComunicados(prev => prev.filter(c => c.id !== deletedId))
+      })
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [profile?.condominio_id, setComunicados])
+
   useEffect(() => {
     if (!isSupabaseConfigured || !profile?.condominio_id) return
 
@@ -116,6 +156,46 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         }
       })
   }, [profile?.condominio_id])
+
+  // Keep ocorrencias synced across sessions/devices in real time.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !profile?.condominio_id) return
+
+    const channel = supabase
+      .channel(`realtime-ocorrencias-${profile.condominio_id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ocorrencias',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const inserted = { ...(payload.new as OcorrenciaComNotas), notas: [] }
+        setOcorrencias(prev => prev.some(o => o.id === inserted.id) ? prev : [inserted, ...prev])
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'ocorrencias',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const updated = payload.new as OcorrenciaComNotas
+        setOcorrencias(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o))
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'ocorrencias',
+        filter: `condominio_id=eq.${profile.condominio_id}`,
+      }, payload => {
+        const deletedId = String(payload.old.id)
+        setOcorrencias(prev => prev.filter(o => o.id !== deletedId))
+      })
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [profile?.condominio_id, setOcorrencias])
 
   const [documentos, setDocumentos] = useState<Documento[]>(() => loadLS('cg_documentos', []))
   useEffect(() => {

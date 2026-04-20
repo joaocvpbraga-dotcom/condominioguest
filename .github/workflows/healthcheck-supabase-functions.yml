@@ -1,0 +1,31 @@
+name: Healthcheck Supabase Functions
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  healthcheck-functions:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_REF: kypvylnyugmiukobsjoi
+      APP_ORIGIN: https://condominioguest.vercel.app
+
+    steps:
+      - name: Check function endpoints
+        run: |
+          set -euo pipefail
+          functions=(create-user delete-user update-role send-urgent-occurrence-email)
+          for fn in "${functions[@]}"; do
+            url="https://${PROJECT_REF}.supabase.co/functions/v1/${fn}"
+            status=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$url" \
+              -H "Origin: ${APP_ORIGIN}" \
+              -H "Access-Control-Request-Method: POST" \
+              -H "Access-Control-Request-Headers: authorization,content-type,apikey")
+            if [ "$status" != "200" ]; then
+              echo "Function ${fn} healthcheck failed with status ${status}"
+              exit 1
+            fi
+            echo "Function ${fn} healthy (HTTP 200)."
+          done
