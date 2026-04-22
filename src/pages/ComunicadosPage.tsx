@@ -15,6 +15,10 @@ export function ComunicadosPage() {
   const { comunicados, setComunicados, moradores } = useAppData()
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const podeCriarComunicado =
+    profile?.role === 'admin' ||
+    profile?.role === 'proprietario' ||
+    profile?.role === 'inquilino'
   const roleLabel = (role: string) => (role === 'inquilino' || role === 'funcionario') ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatarios = moradores.filter(m => m.role !== 'admin')
 
@@ -171,7 +175,7 @@ export function ComunicadosPage() {
           <h1 className="text-2xl font-bold text-slate-800">Comunicados</h1>
           <p className="text-slate-500 mt-1">Avisos e informações para moradores e inquilinos</p>
         </div>
-        {isAdmin && (
+        {podeCriarComunicado && (
           <Button onClick={openNovoComunicado}>
             <Plus size={16} /> Novo Comunicado
           </Button>
@@ -195,7 +199,7 @@ export function ComunicadosPage() {
       )}
 
       {visibleComunicados.length === 0 ? (
-        <EmptyState icon={<Megaphone size={48} />} title="Sem comunicados" description={isAdmin ? 'Publique o primeiro comunicado.' : 'Sem comunicados por enquanto.'} action={isAdmin ? <Button onClick={openNovoComunicado}><Plus size={16} /> Publicar</Button> : undefined} />
+        <EmptyState icon={<Megaphone size={48} />} title="Sem comunicados" description={podeCriarComunicado ? 'Publique o primeiro comunicado.' : 'Sem comunicados por enquanto.'} action={podeCriarComunicado ? <Button onClick={openNovoComunicado}><Plus size={16} /> Publicar</Button> : undefined} />
       ) : (
         <div className="space-y-4">
           {visibleComunicados.map(c => {

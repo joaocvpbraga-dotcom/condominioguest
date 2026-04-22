@@ -29,6 +29,11 @@ export function DashboardPage() {
   const { moradores, quotas, ocorrencias, comunicados, manutencoes, fracoes, rubricas, documentos } = useAppData()
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  // Nome completo, cada palavra com inicial maiúscula
+  function capitalizeWords(str: string) {
+    return str.replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w/g, c => c.toLowerCase())
+  }
+  const nomeCompleto = capitalizeWords(profile?.nome ?? 'Administrador')
   const isAdmin = profile?.role === 'admin'
   const roleValue = profile?.role as string | undefined
   const isInquilino = roleValue === 'inquilino' || roleValue === 'funcionario'
@@ -211,10 +216,10 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          <p className="text-slate-400 mb-1 text-sm capitalize">{today}</p>
           <h1 className="text-2xl font-bold text-slate-800">
-            Bom dia, {profile?.nome?.split(' ')[0] ?? 'Administrador'} 👋
+            Bom dia, {nomeCompleto} 👋
           </h1>
-          <p className="text-slate-400 mt-1 text-sm capitalize">{today}</p>
         </div>
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm shrink-0">
           <Building2 size={18} className="text-blue-600" />

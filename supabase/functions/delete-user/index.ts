@@ -59,6 +59,35 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // Remover referencias em fracoes para evitar violacao de FK ao apagar o perfil.
+    const { error: fracoesOwnerErr } = await adminClient
+      .from('fracoes')
+      .update({ proprietario_id: null })
+      .eq('condominio_id', callerProfile.condominio_id)
+      .eq('proprietario_id', userId)
+    if (fracoesOwnerErr) {
+      return new Response(JSON.stringify({ error: fracoesOwnerErr.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { error: fracoesTenantErr } = await adminClient
+      .from('fracoes')
+      .update({ inquilino_id: null })
+      .eq('condominio_id', callerProfile.condominio_id)
+      .eq('inquilino_id', userId)
+    if (fracoesTenantErr) {
+      const rawTenantErr = (fracoesTenantErr.message || '').toLowerCase()
+      // Some databases do not have fracoes.inquilino_id yet; do not block delete in that case.
+      if (!rawTenantErr.includes("could not find the 'inquilino_id' column")) {
+        return new Response(JSON.stringify({ error: fracoesTenantErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     // Apagar da BD primeiro, depois do Auth
     const { error: profileDeleteErr } = await adminClient.from('profiles').delete().eq('id', userId)
     if (profileDeleteErr) {
