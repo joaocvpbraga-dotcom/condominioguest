@@ -17,7 +17,7 @@ export function ComunicadosPage() {
   const isAdmin = profile?.role === 'admin'
   const podeCriarComunicado =
     profile?.role === 'admin' ||
-    profile?.role === 'proprietario' ||
+    profile?.role === 'morador' ||
     profile?.role === 'inquilino'
   const roleLabel = (role: string) => (role === 'inquilino' || role === 'funcionario') ? 'Inquilino' : role === 'morador' ? 'Proprietário' : 'Administrador'
   const destinatarios = moradores.filter(m => m.role !== 'admin')
