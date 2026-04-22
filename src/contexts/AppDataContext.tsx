@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { Profile, Fracao, Quota, OcorrenciaComNotas, Comunicado, Documento, Orcamento, Fornecedor, Manutencao, RegistoCaixa, RecebimentoTrimestral, Obra, PermissoesMorador } from '@/types'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
@@ -76,6 +77,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   // Ensure moradores (non-admin) appear in their own list
   useEffect(() => {
     if (!profile || profile.role === 'admin') return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMoradores(prev => {
       const exists = prev.some(m => m.id === profile.id)
       if (exists) return prev

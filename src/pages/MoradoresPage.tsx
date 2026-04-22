@@ -167,6 +167,7 @@ export function MoradoresPage() {
     if (tab === 'utilizadores' || tab === 'moradores') {
       fetchUtilizadores()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
   const [search, setSearch] = useState('')

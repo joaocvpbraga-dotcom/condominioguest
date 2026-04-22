@@ -40,6 +40,7 @@ export function DashboardPage() {
   }
 
   const now = new Date()
+  const nowTs = now.getTime()
   const mesAtual = now.getMonth() + 1
   const anoAtual = now.getFullYear()
   const mesLabel = now.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
@@ -122,7 +123,7 @@ export function DashboardPage() {
   // ── Documentos a expirar ─────────────────────────────────────
   const expiring = documentos
     .filter(d => d.data_validade)
-    .map(d => ({ ...d, daysLeft: Math.ceil((new Date(d.data_validade!).getTime() - Date.now()) / 86400000) }))
+    .map(d => ({ ...d, daysLeft: Math.ceil((new Date(d.data_validade!).getTime() - nowTs) / 86400000) }))
     .filter(d => d.daysLeft <= 60)
     .sort((a, b) => a.daysLeft - b.daysLeft)
 
