@@ -8,6 +8,7 @@ export interface Profile {
   role: UserRole
   condominio_id?: string
   created_at: string
+  precisa_alt?: boolean
 }
 
 export interface Condominio {
