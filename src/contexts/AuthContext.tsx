@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { Profile } from '@/types'
+import { useNavigate } from 'react-router-dom'
 
 const DEMO_PROFILE: Profile = {
   id: 'demo',
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(() => (isSupabaseConfigured ? null : DEMO_PROFILE))
   const [loading, setLoading] = useState(() => isSupabaseConfigured)
+  const navigate = useNavigate()
 
   async function fetchProfile(userId: string) {
     const { data } = await supabase
@@ -65,6 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (
+      profile &&
+      (profile.role === 'morador' || profile.role === 'inquilino') &&
+      profile.precisa_alt
+    ) {
+      navigate('/alterar-password', { replace: true })
+    }
+  }, [profile])
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
