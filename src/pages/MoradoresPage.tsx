@@ -299,6 +299,19 @@ export function MoradoresPage() {
     const proprietario = moradores.find(m => m.id === formFracao.proprietario_id)
     const condominioId = profile?.condominio_id ?? 'c1'
 
+    // Validação: impedir mais do que um proprietário por fração
+    if (formFracao.proprietario_id) {
+      const fracaoComMesmoProprietario = fracoes.find(f =>
+        f.numero === formFracao.numero &&
+        f.proprietario_id &&
+        (!editFracao || f.id !== editFracao.id)
+      )
+      if (fracaoComMesmoProprietario) {
+        alert('Já existe um proprietário atribuído a esta fração. Remova primeiro o proprietário atual para poder atribuir outro.')
+        return
+      }
+    }
+
     if (editFracao) {
       const updated: Fracao = {
         ...editFracao,
@@ -322,9 +335,19 @@ export function MoradoresPage() {
           proprietario_id: updated.proprietario_id ?? null,
           created_at: updated.created_at,
         })
-        if (error) console.error('Erro ao guardar fração:', error)
+        if (error) {
+          alert('Erro ao guardar fração: ' + error.message)
+          return
+        }
+        // Refetch após gravar
+        const { data, error: fetchError } = await supabase
+          .from('fracoes')
+          .select('*, proprietario:proprietario_id(*)')
+          .eq('condominio_id', condominioId)
+        if (!fetchError && data) setFracoes(data as Fracao[])
+      } else {
+        setFracoes(prev => prev.map(f => f.id === editFracao.id ? updated : f))
       }
-      setFracoes(prev => prev.map(f => f.id === editFracao.id ? updated : f))
     } else {
       const newFracao: Fracao = {
         id: crypto.randomUUID(),
@@ -350,9 +373,19 @@ export function MoradoresPage() {
           proprietario_id: newFracao.proprietario_id ?? null,
           created_at: newFracao.created_at,
         })
-        if (error) console.error('Erro ao guardar fração:', error)
+        if (error) {
+          alert('Erro ao guardar fração: ' + error.message)
+          return
+        }
+        // Refetch após gravar
+        const { data, error: fetchError } = await supabase
+          .from('fracoes')
+          .select('*, proprietario:proprietario_id(*)')
+          .eq('condominio_id', condominioId)
+        if (!fetchError && data) setFracoes(data as Fracao[])
+      } else {
+        setFracoes(prev => [...prev, newFracao])
       }
-      setFracoes(prev => [...prev, newFracao])
     }
     setOpenFracao(false)
     setEditFracao(null)
@@ -360,9 +393,9 @@ export function MoradoresPage() {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-2 sm:p-4 md:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Moradores & Frações</h1>
           <p className="text-slate-500 mt-1">Gerencie os moradores, proprietários e unidades</p>
@@ -374,7 +407,7 @@ export function MoradoresPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit overflow-x-auto">
         <button
           onClick={() => setTab('moradores')}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === 'moradores' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -420,7 +453,7 @@ export function MoradoresPage() {
           {filteredMoradores.length === 0 ? (
             <EmptyState icon={<Users size={48} />} title="Nenhum morador encontrado" description="Adicione o primeiro morador ao condomínio." action={<Button onClick={openCreateMorador}><Plus size={16} /> Adicionar</Button>} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredMoradores.map(m => (
                 <Card key={m.id}>
                   <CardBody className="flex items-start gap-4">
@@ -472,7 +505,7 @@ export function MoradoresPage() {
           {fracoes.length === 0 ? (
             <EmptyState icon={<Building2 size={48} />} title="Nenhuma fração registada" description="Adicione as frações/unidades do condomínio." action={<Button onClick={openCreateFracao}><Plus size={16} /> Adicionar</Button>} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {fracoes.sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true })).map(f => (
                 <Card key={f.id}>
                   <CardBody>
