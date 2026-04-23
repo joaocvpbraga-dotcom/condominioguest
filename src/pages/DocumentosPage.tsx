@@ -284,15 +284,15 @@ export function DocumentosPage() {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-2 sm:p-4 md:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Documentos</h1>
           <p className="text-slate-500 mt-1">Atas, regulamentos, seguros e comprovativos</p>
         </div>
         <Button onClick={() => { setEditDoc(null); setForm({ nome: '', descricao: '', categoria: (isAdmin || isOwner) ? 'ata' : 'comprovativo', data_validade: '', periodo: 'mensal', fracao_id: '' }); setOpenModal(true) }}>
-          <Plus size={16} /> {isAdmin ? 'Novo Documento' : 'Novo Documento'}
+          <Plus size={16} /> Adicionar Documento
         </Button>
       </div>
 
@@ -329,7 +329,7 @@ export function DocumentosPage() {
       )}
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap overflow-x-auto">
         <button onClick={() => setCatFilter('todos')} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${catFilter === 'todos' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Todos</button>
         {visibleCategories.map(c => (
           <button key={c} onClick={() => setCatFilter(c)} className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${catFilter === c ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{catLabel[c]}</button>
@@ -338,7 +338,7 @@ export function DocumentosPage() {
 
       {/* Lista */}
       {filtered.length === 0 ? (
-        <EmptyState icon={<FileText size={48} />} title="Sem documentos" description={isAdmin ? 'Carregue o primeiro documento.' : 'Ainda não há documentos disponíveis.'} action={<Button onClick={() => setOpenModal(true)}><Plus size={16} /> {isAdmin ? 'Carregar' : 'Enviar Comprovativo'}</Button>} />
+        <EmptyState icon={<FileText size={48} />} title="Sem documentos" description={isAdmin ? 'Carregue o primeiro documento.' : 'Ainda não há documentos disponíveis.'} action={<Button onClick={() => setOpenModal(true)}><Plus size={16} /> Adicionar Documento</Button>} />
       ) : groupedByFracao ? (
         // Vista agrupada por fração (seguros e comprovativos)
         <div className="space-y-6">
@@ -359,7 +359,7 @@ export function DocumentosPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filtered.map(d => <DocCard key={d.id} d={d} isAdmin={isAdmin} profile={profile} openEdit={openEdit} handleDelete={handleDelete} />)}
         </div>
       )}
